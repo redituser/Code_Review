@@ -1,0 +1,76 @@
+package com.assignment.comment.service;
+
+import com.assignment.comment.dao.CommentRepository;
+import com.assignment.comment.vo.CommentVO;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@Service
+public class CommentService {
+
+    @Autowired
+    private CommentRepository commentRepository;
+    
+    /**
+     * [수정] 특정 게시글의 댓글을 안정적인 2-pass 알고리즘으로 계층 구조화하여 조회합니다.
+     */
+    public List<CommentVO> getCommentsByBoardNo(Integer boardNo) {
+        // 1. DB에서 해당 게시글의 모든 댓글을 정렬된 상태로 가져옵니다.
+        List<CommentVO> allComments = commentRepository.findByBoardNoOrderByParentCommentNoAscCreateDateAsc(boardNo);
+        
+        // 최종적으로 반환할 최상위 댓글 리스트
+        List<CommentVO> rootComments = new ArrayList<>();
+        // 모든 댓글을 빠르게 찾기 위한 Map (Key: commentNo, Value: CommentVO)
+        Map<Integer, CommentVO> commentMap = new HashMap<>();
+        
+        // Pass 1: 모든 댓글을 Map에 넣고, children 리스트를 초기화합니다.
+        for (CommentVO comment : allComments) {
+            comment.setChildren(new ArrayList<>()); // children 리스트 초기화
+            commentMap.put(comment.getCommentNo(), comment);
+        }
+        
+        // Pass 2: 각 댓글을 부모의 children 리스트에 추가합니다.
+        for (CommentVO comment : allComments) {
+            Integer parentId = comment.getParentCommentNo();
+            if (parentId != null) {
+                // 부모 ID가 있는 경우 (대댓글)
+                CommentVO parent = commentMap.get(parentId);
+                if (parent != null) {
+                    // Map에서 부모를 찾아 자식으로 추가
+                    parent.getChildren().add(comment);
+                } else {
+                    // 부모가 없는 고아 댓글 (데이터가 잘못된 경우), 일단 최상위로 처리
+                    rootComments.add(comment);
+                }
+            } else {
+                // 최상위 댓글인 경우
+                rootComments.add(comment);
+            }
+        }
+        
+        return rootComments;
+    }
+
+    /**
+     * 새로운 댓글 또는 대댓글을 추가합니다.
+     */
+    @Transactional
+    public CommentVO addComment(CommentVO comment) {
+        if (comment.getParentCommentNo() != null) {
+            CommentVO parent = commentRepository.findById(comment.getParentCommentNo()).orElse(null);
+            if (parent != null) {
+                int parentDepth = (parent.getDepth() == null) ? 0 : parent.getDepth();
+                comment.setDepth(parentDepth + 1);
+            }
+        } else {
+            comment.setDepth(0);
+        }
+        return commentRepository.save(comment);
+    }
+}

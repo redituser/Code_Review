@@ -1,0 +1,71 @@
+package com.assignment.admin.controller;
+
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.assignment.admin.service.AdminService;
+import com.assignment.member.vo.MemberVO;
+
+@Controller
+public class AdminController {
+	@Autowired
+    private AdminService adminService;
+
+	 @GetMapping("/dashboard")
+	    public String adminDashboard(
+	            @RequestParam(required = false) String keyword,
+	            @PageableDefault(size = 10, sort = "createDate", direction = Sort.Direction.DESC) Pageable pageable,
+	            Model model) {
+	        
+	        Page<MemberVO> memberPage = adminService.findMembers(keyword, pageable);
+
+	        // ★★★ [수정] Page<MemberVO>를 Page<AdminMemberDto>로 변환 ★★★
+	        Page<AdminMemberDto> memberDtoPage = memberPage.map(AdminMemberDto::new);
+	        
+	        model.addAttribute("memberPage", memberDtoPage);
+	        model.addAttribute("keyword", keyword);
+	        
+	        return "admin/dashboard";
+	    }
+	    // ★★★ [추가] 사용자 등급 변경 API ★★★
+	    @PostMapping("/users/{userId}/type")
+	    @ResponseBody
+	    public ResponseEntity<?> updateUserType(@PathVariable String userId, @RequestBody Map<String, Character> payload) {
+	        try {
+	            adminService.updateUserType(userId, payload.get("type"));
+	            return ResponseEntity.ok().build();
+	        } catch (Exception e) {
+	            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+	        }
+	    }
+
+	    // ★★★ [추가] 사용자 삭제 API ★★★
+	    @DeleteMapping("/users/{userId}")
+	    @ResponseBody
+	    public ResponseEntity<?> deleteUser(@PathVariable String userId) {
+	        try {
+	            adminService.deleteUser(userId);
+	            return ResponseEntity.ok().build();
+	        } catch (Exception e) {
+	            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+	        }
+	    }
+
+
+	
+}

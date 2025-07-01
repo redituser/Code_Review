@@ -1,0 +1,47 @@
+package com.assignment.board.dao;
+
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import com.assignment.board.vo.BoardVO;
+
+//JPA 전용
+@Repository
+public interface BoardRepository extends JpaRepository<BoardVO, Integer>{
+	List<BoardVO> findAll();
+	BoardVO findById(int id);
+	<S extends BoardVO> S save(S entity);
+	List<BoardVO> findByGroupNoOrderByBoardNoDesc(Integer groupNo);
+	List<BoardVO> findByBoardTypeOrderByBoardNoDesc(String boardType);
+	List<BoardVO> findByGroupNoAndBoardTypeOrderByBoardNoDesc(int groupNo, String boardType);
+	List<BoardVO> findByWriterIdOrderByCreateDateDesc(String writerId);
+	List<BoardVO> findTop5ByOrderByCreateDateDesc();
+	
+	
+	
+	 /**
+     * 인기 게시글 목록을 페이징하여 조회합니다. (수정된 쿼리)
+     */
+    @Query(value = "SELECT b FROM BoardVO b LEFT JOIN b.likes l " +
+                   "GROUP BY b.boardNo, b.boardTitle, b.boardCategory, b.writerId, b.groupNo, " +
+                   "b.passStatus, b.createDate, b.updateDate, b.boardType " + // CLOB 타입인 boardContent를 제외한 모든 필드 명시
+                   "ORDER BY COUNT(l) DESC, b.createDate DESC",
+           countQuery = "SELECT count(b) FROM BoardVO b")
+    Page<BoardVO> findPopularBoards(Pageable pageable);
+
+    /**
+     * 가장 인기 있는 게시글 5개를 조회합니다. (수정된 쿼리)
+     */
+    @Query(value = "SELECT b FROM BoardVO b LEFT JOIN b.likes l " +
+                   "GROUP BY b.boardNo, b.boardTitle, b.boardCategory, b.writerId, b.groupNo, " +
+                   "b.passStatus, b.createDate, b.updateDate, b.boardType " + // CLOB 타입인 boardContent를 제외한 모든 필드 명시
+                   "ORDER BY COUNT(l) DESC, b.createDate DESC")
+    List<BoardVO> findTop5PopularBoards(Pageable pageable);
+	 
+
+}

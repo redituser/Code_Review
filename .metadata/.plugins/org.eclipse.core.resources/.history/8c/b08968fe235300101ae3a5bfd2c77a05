@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>CODE CIRCLE - Dashboard</title>
+<style>
+/* === 1. 기본 및 전역 설정 (GitHub Primer 스타일) === */
+:root {
+	/* 색상 변수 */
+	--color-canvas-default: #0d1117;
+	--color-canvas-overlay: rgba(22, 27, 34, 0.8);
+	--color-neutral-subtle: #161b22;
+	--color-border-default: #30363d;
+	--color-border-muted: #21262d;
+	--color-fg-default: #e6edf3;
+	--color-fg-muted: #7d8590;
+	--color-fg-on-emphasis: #ffffff;
+	--color-accent-fg: #1f6feb;
+	--color-accent-emphasis: #238636;
+	--color-accent-emphasis-hover: #2ea043;
+	--color-danger-fg: #f85149;
+
+	/* 폰트 변수 */
+	--font-family-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+
+	/* 테두리 및 그림자 */
+	--border-radius-medium: 6px;
+	--shadow-medium: 0 8px 24px var(--color-canvas-default);
+}
+
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+body {
+	font-family: var(--font-family-sans);
+	background-color: var(--color-canvas-default);
+	color: var(--color-fg-default);
+	line-height: 1.5;
+}
+
+a {
+	color: var(--color-accent-fg);
+	text-decoration: none;
+}
+a:hover {
+	text-decoration: underline;
+}
+
+/* === 2. 레이아웃 === */
+.header {
+	background-color: var(--color-neutral-subtle);
+	border-bottom: 1px solid var(--color-border-default);
+	padding: 16px 24px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.container {
+	display: grid;
+	grid-template-columns: 280px 1fr 320px;
+	gap: 24px;
+	padding: 24px;
+	max-width: 1280px;
+	margin: 0 auto;
+}
+
+@media (max-width: 1200px) {
+	.container {
+		grid-template-columns: 1fr;
+		gap: 16px;
+	}
+	.sidebar-left, .sidebar-right { order: 2; }
+	.main-content { order: 1; }
+}
+
+/* === 3. 컴포넌트 (BEM 방법론 적용) === */
+
+/* Card (기존 section들을 감싸는 기본틀) */
+.card {
+	background-color: var(--color-neutral-subtle);
+	border: 1px solid var(--color-border-default);
+	border-radius: var(--border-radius-medium);
+	padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.card__header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding-bottom: 12px;
+	border-bottom: 1px solid var(--color-border-muted);
+}
+.card__title {
+	font-weight: 600;
+	font-size: 14px;
+	color: var(--color-fg-default);
+}
+.card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+
+/* Button */
+.btn {
+	border: 1px solid var(--color-border-default);
+	padding: 6px 12px;
+	border-radius: var(--border-radius-medium);
+	font-size: 12px;
+	font-weight: 500;
+	cursor: pointer;
+	text-decoration: none;
+	display: inline-block;
+	transition: background-color 0.2s;
+	background-color: var(--color-border-muted);
+	color: var(--color-fg-default);
+}
+.btn:hover {
+	background-color: var(--color-border-default);
+	text-decoration: none;
+}
+.btn--primary {
+	background-color: var(--color-accent-emphasis);
+	color: var(--color-fg-on-emphasis);
+	border-color: var(--color-accent-emphasis);
+}
+.btn--primary:hover {
+	background-color: var(--color-accent-emphasis-hover);
+}
+.btn--full-width {
+    width: 100%;
+    text-align: center;
+}
+
+
+/* Group List */
+.group-list__item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px;
+	border-radius: var(--border-radius-medium);
+	cursor: pointer;
+	transition: background-color 0.2s;
+}
+.group-list__item:hover {
+	background-color: var(--color-border-muted);
+}
+.group-list__icon {
+	width: 20px;
+	height: 20px;
+	background-color: var(--color-accent-fg);
+	border-radius: 3px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--color-fg-on-emphasis);
+	font-size: 10px;
+	font-weight: bold;
+    flex-shrink: 0;
+}
+.group-list__name {
+	color: var(--color-fg-default);
+	font-size: 14px;
+	flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.group-list__role {
+	color: var(--color-fg-muted);
+	font-size: 12px;
+}
+
+/* Post List */
+.post-list__item {
+	display: flex;
+	gap: 12px;
+	padding: 16px 0;
+	border-bottom: 1px solid var(--color-border-muted);
+}
+.post-list__item:first-child {
+    padding-top: 0;
+}
+.post-list__item:last-child {
+	border-bottom: none;
+    padding-bottom: 0;
+}
+.post-list__icon {
+	width: 16px;
+	height: 16px;
+	background-color: var(--color-accent-emphasis);
+	border-radius: 50%;
+	margin-top: 4px;
+    flex-shrink: 0;
+}
+.post-list__content {
+	flex: 1;
+}
+.post-list__title {
+	font-weight: 500;
+	font-size: 14px;
+	margin-bottom: 4px;
+	display: block;
+}
+.post-list__meta {
+	color: var(--color-fg-muted);
+	font-size: 12px;
+}
+.post-list__category {
+	background-color: var(--color-accent-fg);
+	color: var(--color-fg-on-emphasis);
+	padding: 2px 8px;
+	border-radius: 12px;
+	font-size: 11px;
+	margin-left: 8px;
+}
+
+/* Modal */
+.modal {
+	position: fixed;
+	top: 0; left: 0;
+	width: 100%; height: 100%;
+	background: var(--color-canvas-overlay);
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	overflow-y: auto;
+	padding: 5vh 0;
+	z-index: 1000;
+	visibility: hidden;
+	opacity: 0;
+	transition: visibility 0s 0.2s, opacity 0.2s ease-in-out;
+}
+.modal.is-visible {
+	visibility: visible;
+	opacity: 1;
+	transition-delay: 0s;
+}
+.modal__content {
+	background-color: var(--color-neutral-subtle);
+	color: var(--color-fg-default);
+	padding: 24px;
+	border-radius: var(--border-radius-medium);
+	border: 1px solid var(--color-border-default);
+	width: 90%;
+    max-width: 500px;
+	box-shadow: var(--shadow-medium);
+	transform: scale(0.95);
+	transition: transform 0.2s ease-in-out;
+}
+.modal.is-visible .modal__content {
+	transform: scale(1);
+}
+.modal__header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 20px;
+	padding-bottom: 12px;
+	border-bottom: 1px solid var(--color-border-default);
+}
+.modal__title {
+	color: var(--color-fg-default);
+	margin: 0;
+	font-size: 18px;
+}
+.modal__close-btn {
+	background: none;
+	border: none;
+	color: var(--color-fg-muted);
+	font-size: 24px;
+	cursor: pointer;
+	line-height: 1;
+}
+.modal__close-btn:hover {
+	color: var(--color-fg-default);
+}
+.modal__footer {
+	display: flex;
+	gap: 12px;
+	justify-content: flex-end;
+	margin-top: 24px;
+}
+
+/* Form Elements */
+.form-group {
+	margin-bottom: 16px;
+}
+.form-group__label {
+	display: block;
+	margin-bottom: 6px;
+	color: var(--color-fg-default);
+	font-size: 14px;
+}
+.form-group__input {
+	width: 100%;
+	padding: 8px 12px;
+	background: var(--color-canvas-default);
+	border: 1px solid var(--color-border-default);
+	border-radius: var(--border-radius-medium);
+	color: var(--color-fg-default);
+	font-size: 14px;
+}
+.form-group__input:focus {
+	outline: none;
+	border-color: var(--color-accent-fg);
+	box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.3);
+}
+
+/* ... 기타 다른 스타일들 ... */
+.member-list-container {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--color-border-default);
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 20px;
+}
+
+.member-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 4px;
+    border-bottom: 1px solid var(--color-border-muted);
+}
+
+.member-item:last-child {
+    border-bottom: none;
+}
+.role-badge {
+    font-size: 0.8em;
+    padding: 3px 8px;
+    border-radius: 10px;
+    color: white;
+}
+.role-badge.leader {
+    background-color: var(--color-accent-emphasis);
+}
+.role-badge.member {
+    background-color: var(--color-fg-muted);
+}
+.management-actions .btn {
+    margin-right: 8px;
+    margin-bottom: 8px;
+}
+.group-list__actions {
+	position: relative;
+	margin-left: auto;
+}
+.actions-btn {
+	background: none;
+	border: none;
+	padding: 4px;
+	cursor: pointer;
+	border-radius: 4px;
+	display: flex;
+	align-items: center;
+}
+.actions-btn:hover {
+	background-color: var(--color-border-muted);
+}
+.actions-btn svg {
+	fill: var(--color-fg-muted);
+}
+.dropdown-menu {
+	display: none;
+	position: absolute;
+	top: 100%;
+	right: 0;
+	z-index: 10;
+	background-color: var(--color-neutral-subtle);
+	border: 1px solid var(--color-border-default);
+	border-radius: var(--border-radius-medium);
+	box-shadow: var(--shadow-medium);
+	padding: 4px 0;
+	min-width: 160px;
+}
+.dropdown-menu.show {
+	display: block;
+}
+.dropdown-item {
+	display: block;
+	width: 100%;
+	text-align: left;
+	padding: 8px 16px;
+	color: var(--color-fg-default);
+	font-size: 14px;
+	background: none;
+	border: none;
+	cursor: pointer;
+}
+.dropdown-item:hover {
+	background-color: var(--color-accent-fg);
+	color: var(--color-fg-on-emphasis);
+}
+.dropdown-item--danger:hover {
+	background-color: var(--color-danger-fg);
+}
+.header-actions {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.header-icon-btn {
+	position: relative;
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: var(--color-fg-muted);
+	padding: 4px;
+}
+.header-icon-btn:hover {
+	color: var(--color-fg-default);
+}
+.header-icon-btn .badge {
+	position: absolute;
+	top: -2px;
+	right: -4px;
+	background-color: var(--color-danger-fg);
+	color: var(--color-fg-on-emphasis);
+	font-size: 10px;
+	font-weight: 600;
+	padding: 1px 5px;
+	border-radius: 10px;
+	border: 2px solid var(--color-neutral-subtle);
+}
+.selected-members-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+.selected-member-tag {
+    background: var(--color-accent-fg);
+    color: var(--color-fg-on-emphasis);
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.selected-member-tag__remove-btn {
+    background: none;
+    border: none;
+    color: var(--color-fg-on-emphasis);
+    cursor: pointer;
+    padding: 0;
+    margin-left: 4px;
+    line-height: 1;
+}
+.search-results-container {
+    margin-top: 4px;
+    font-size: 14px;
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--border-radius-medium);
+    max-height: 150px;
+    overflow-y: auto;
+}
+.search-result-item {
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--color-border-muted);
+    color: var(--color-fg-default);
+}
+.search-result-item:last-child {
+    border-bottom: none;
+}
+.search-result-item:hover {
+    background-color: var(--color-border-muted);
+}
+.search-result-item--empty {
+    padding: 12px;
+    color: var(--color-fg-muted);
+    text-align: center;
+}
+</style>
+</head>
+<body>
+	<!-- 헤더 -->
+	<header class="header">
+        <h1><a href="/" style="text-decoration: none; color: inherit;">CODE CIRCLE</a></h1>
+        <div class="user-info">
+            {{#isLogin}}
+            <div class="header-actions">
+                <button class="header-icon-btn" onclick="openInviteModal()">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 16a2 2 0 0 0 1.985-1.75c.017-.137-.097-.25-.235-.25h-3.5c-.138 0-.252.113-.235.25A2 2 0 0 0 8 16ZM3 5a5 5 0 0 1 10 0v2.947c0 .05.015.098.042.139l1.703 2.555A.5.5 0 0 1 14.336 11H1.664a.5.5 0 0 1-.409-.859l1.703-2.555A.25.25 0 0 0 3 7.947V5Z"></path></svg>
+                    {{#inviteCount}}
+                    <span class="badge">{{inviteCount}}</span>
+                    {{/inviteCount}}
+                </button>
+                <span>{{loginId}}님 환영합니다</span>
+                <a href="/member/mypage" class="btn">마이페이지</a>
+                <a href="/member/logout" class="btn">로그아웃</a>
+            </div>
+            {{/isLogin}}
+            {{^isLogin}}
+            <a href="/user/login" class="btn btn--primary">로그인</a>
+            {{/isLogin}}
+        </div>
+    </header>
+
+	<!-- 로그인된 사용자 화면 -->
+	{{#isLogin}}
+	<div class="container">
+		<!-- 왼쪽 사이드바 -->
+		<aside class="sidebar-left">
+            <section class="card">
+                <div class="card__header">
+                    <h2 class="card__title">내 그룹</h2>
+                    <button onclick="openCreateGroupModal()" class="btn">새 그룹</button>
+                </div>
+                <div id="my-groups-container" class="card__body group-list">
+                    <p style="text-align: center; color: var(--color-fg-muted);">그룹 목록을 불러오는 중...</p>
+                </div>
+            </section>
+            <section class="card" style="margin-top: 24px;">
+                <div class="card__header">
+                    <h2 class="card__title">라이브 코드 방</h2>
+                    <button onclick="openCreateLiveRoomModal()" class="btn">새 라이브 방</button>
+                </div>
+                <div id="my-live-rooms-container" class="card__body group-list">
+                    <p style="text-align: center; color: var(--color-fg-muted);">참여중인 방이 없습니다.</p>
+                </div>
+            </section>
+        </aside>
+		
+		<!-- 메인 콘텐츠 -->
+		<main class="card main-content">
+    <div class="card__header">
+        <h2 class="card__title">내가 작성한 게시글</h2>
+        <a href="/board/boardnew" class="btn btn--primary">새 게시글</a>
+    </div>
+		    <div class="card__body post-list">
+		        {{#myPosts}}
+		        <article class="post-list__item">
+		            <div class="post-list__icon"></div>
+		            <div class="post-list__content">
+		                <a href="/board/detail/{{boardNo}}" class="post-list__title">{{boardTitle}}</a>
+		                <div class="post-list__meta">
+		                    {{writerId}}님이 {{createDate}}에 작성
+		                    <span class="post-list__category">{{boardCategory}}</span>
+		                    <span style="margin-left: 10px; color: #f85149;">❤️ {{likeCount}}</span>
+		                </div>
+		            </div>
+		        </article>
+		        {{/myPosts}}
+		
+		        {{^myPosts}}
+		        <div style="text-align: center; color: var(--color-fg-muted); padding: 40px 0;">
+		            <p style="font-size: 12px;">아직 작성한 게시글이 없습니다.</p>
+		        </div>
+		        {{/myPosts}}
+		    </div>
+		</main>
+		<aside class="sidebar-right">
+
+    <div class="card" style="margin-bottom: 24px;">
+        <div class="card__header">
+            <span class="card__title">최신 게시글</span>
+            <a href="/board/list" class="btn">더보기</a>
+        </div>
+        <div class="card__body post-list">
+            {{#recentPosts}}
+            <article class="post-list__item">
+                <div class="post-list__icon"></div>
+                <div class="post-list__content">
+                    <a href="/board/detail/{{boardNo}}" class="post-list__title">{{boardTitle}}</a>
+                    <div class="post-list__meta">
+                        <span>작성자: {{writerId}}</span>
+                        <span style="margin-left: 10px; color: #f85149;">❤️ {{likeCount}}</span>
+                    </div>
+                </div>
+            </article>
+            {{/recentPosts}}
+            
+            {{^recentPosts}}
+            <div style="text-align: center; color: var(--color-fg-muted); padding: 40px 0;">
+                <p style="font-size: 12px;">작성된 게시글이 없습니다.</p>
+            </div>
+            {{/recentPosts}}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card__header">
+            <span class="card__title">좋아요한 게시글</span>
+        </div>
+        <div class="card__body post-list">
+            {{#likedPosts}}
+            <article class="post-list__item">
+                <div class="post-list__icon" style="background-color: #f85149;"></div>
+                <div class="post-list__content">
+                    <a href="/board/detail/{{boardNo}}" class="post-list__title">{{boardTitle}}</a>
+                    <div class="post-list__meta">
+                        {{writerId}}님이 작성
+                        <span style="margin-left: 10px; color: #f85149;">❤️ {{likeCount}}</span>
+                    </div>
+                </div>
+            </article>
+            {{/likedPosts}}
+
+            {{^likedPosts}}
+            <div style="text-align: center; color: var(--color-fg-muted); padding: 40px 0;">
+                <p style="font-size: 12px;">아직 좋아요를 누른 게시글이 없습니다.</p>
+            </div>
+            {{/likedPosts}}
+        </div>
+    </div>
+</aside>
+		
+		
+	</div>
+	{{/isLogin}}
+
+	<!-- 로그인하지 않은 사용자 화면 -->
+	{{^isLogin}}
+	<div style="text-align: center; padding: 80px 20px; max-width: 600px; margin: 0 auto;">
+		<div style="font-size: 64px; margin-bottom: 24px;">👋</div>
+		<h2 style="color: #f0f6fc; margin-bottom: 16px; font-size: 32px;">CODE CIRCLE에 오신 것을 환영합니다!</h2>
+		<p style="color: #7d8590; margin-bottom: 32px; font-size: 16px; line-height: 1.6;">개발자들이 함께 코드를 공유하고 학습하는 공간입니다.<br> 그룹을 만들어 팀원들과 함께 성장하세요.</p>
+		<div style="display: flex; gap: 16px; justify-content: center; margin-bottom: 48px;">
+			<a href="/user/login" class="btn btn--primary" style="padding: 12px 24px; font-size: 16px;">로그인</a> 
+			<a href="/user/signup" class="btn" style="padding: 12px 24px; font-size: 16px;">회원가입</a>
+		</div>
+	</div>
+	{{/isLogin}}
+
+    <!-- === 모달들 (Body 태그 바로 위에 위치) === -->
+	<!-- 초대 목록 모달 -->
+	<div id="inviteModal" class="modal">
+		<div class="modal__content">
+			<div class="modal__header">
+				<h3 class="modal__title">받은 초대 목록</h3>
+				<button onclick="closeModal('inviteModal')" class="modal__close-btn">&times;</button>
+			</div>
+			<div id="inviteList" class="modal__body">로딩 중...</div>
+		</div>
+	</div>
+
+	<!-- 그룹 생성 모달 -->
+	<div id="createGroupModal" class="modal">
+		<div class="modal__content">
+			<form id="createGroupForm" onsubmit="submitGroupCreation(event)">
+                <div class="modal__header">
+                    <h3 class="modal__title">새 그룹 만들기</h3>
+                    <button type="button" onclick="closeModal('createGroupModal')" class="modal__close-btn">&times;</button>
+                </div>
+                <div class="modal__body">
+				    <div class="form-group" id="groupNameSection">
+				        <label for="groupNameInput" class="form-group__label">그룹명</label>
+				        <input id="groupNameInput" type="text" name="groupName" required class="form-group__input">
+				    </div>
+				    <div class="form-group">
+				        <label for="memberSearch" class="form-group__label">초대할 멤버 검색</label>
+				        <input type="text" id="memberSearch" placeholder="예: user1, user2" class="form-group__input" oninput="searchMembers(this, '')" autocomplete="off">
+				        <div id="searchResults" class="search-results-container" style="display: none;"></div>
+				    </div>
+				    <div>
+				        <div class="form-group__label" style="font-size: 12px; color: var(--color-fg-muted);">선택된 멤버:</div>
+				        <div id="selectedMembers" class="selected-members-container"></div>
+				    </div>
+				</div>
+				<div class="modal__footer">
+					<button type="button" onclick="closeModal('createGroupModal')" class="btn">취소</button>
+					<button type="submit" class="btn btn--primary">그룹 생성 및 초대</button>
+				</div>
+			</form>
+		</div>
+	</div>
+	
+	<!-- 그룹관리 모달 -->
+	<div class="modal" id="groupManageModal">
+        <div class="modal__content" style="max-width: 500px;">
+            <div class="modal__header">
+                <h2 id="modal-group-name">그룹 이름</h2>
+                <button class="modal__close-btn" onclick="closeModal('groupManageModal')">&times;</button>
+            </div>
+            <div class="modal__body">
+                <h4>멤버 목록</h4>
+                <div id="modal-member-list" class="member-list-container"></div>
+                <hr style="border-color: var(--color-border-muted); margin: 16px 0;">
+                <h4>그룹 관리</h4>
+                <div class="management-actions">
+                    <div id="leader-actions" style="display: none;"> 
+                        <button class="btn btn--primary" onclick="toggleInviteUI(true)">멤버 초대하기</button>
+                        <button class="btn btn-danger" onclick="deleteGroup(targetGroupNo)">그룹 삭제</button>
+                    </div>
+                     <button class="btn" onclick="leaveGroup(targetGroupNo)">그룹 탈퇴</button>
+                    <div id="inline-invite-section" style="display: none; margin-top: 15px; border-top: 1px solid var(--color-border-muted); padding-top: 15px;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 새 라이브 방 생성 모달 -->
+    <div id="createLiveRoomModal" class="modal">
+        <div class="modal__content">
+            <form id="createLiveRoomForm" onsubmit="submitLiveRoomCreation(event)">
+                <div class="modal__header">
+                    <h3 class="modal__title">새 라이브 방 만들기</h3>
+                    <button type="button" onclick="closeModal('createLiveRoomModal')" class="modal__close-btn">&times;</button>
+                </div>
+                <div class="modal__body">
+                    <div class="form-group">
+                        <label for="liveRoomNameInput" class="form-group__label">방 이름</label>
+                        <input id="liveRoomNameInput" type="text" name="roomName" required class="form-group__input" placeholder="예: 알고리즘 스터디">
+                    </div>
+                </div>
+                <div class="modal__footer">
+                    <button type="button" onclick="closeModal('createLiveRoomModal')" class="btn">취소</button>
+                    <button type="submit" class="btn btn--primary">방 만들기</button>
+                </div>
+            </form>
+        </div>
+    </div>
+	
+    <!-- WebSocket 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>   
+	
+    <!-- 메인 페이지 전용 스크립트: 구조 개선 및 정리 -->
+    <script>
+        // === 1. 전역 변수 선언부 ===
+        // 다른 함수들에서 공통으로 사용할 변수들을 맨 위에 모아서 관리합니다.
+        let selectedMemberIds = [];
+        let targetGroupNo = null;
+
+        // === 2. 페이지 로딩이 완료되면 실행될 초기화 로직 ===
+        // DOMContentLoaded 이벤트 리스너 안에서 모든 초기화 함수를 호출합니다.
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mustache 문법을 이용해 로그인된 상태일 때만 목록을 불러옵니다.
+            {{#isLogin}}
+            loadMyGroups();
+            loadMyLiveRooms();
+            {{/isLogin}}
+            
+            // 모달 외부 클릭 시 닫기 이벤트 리스너를 한 번만 등록합니다.
+            window.addEventListener('click', function(event) {
+                if (event.target.classList.contains('modal')) {
+                    closeModal(event.target.id);
+                }
+                // 드롭다운 외부 클릭 시 닫기
+                if (!event.target.closest('.actions-btn')) {
+                    closeAllDropdowns();
+                }
+            });
+        });
+
+        // === 3. 함수 정의부 (기능별로 그룹화) ===
+
+        // --- 비동기 데이터 로드 함수 ---
+        async function loadMyGroups() {
+            const container = document.getElementById('my-groups-container');
+            container.innerHTML = '<p style="text-align: center; color: var(--color-fg-muted);">그룹 목록을 불러오는 중...</p>';
+            try {
+                const response = await fetch('/api/my-groups');
+                if (!response.ok) throw new Error('그룹 목록 로드 실패');
+                
+                const myGroups = await response.json();
+                if (myGroups.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: var(--color-fg-muted);">참여중인 그룹이 없습니다.</p>';
+                    return;
+                }
+
+                container.innerHTML = myGroups.map(group => {
+                    const leaveOption = !group.leader ? `<button class="dropdown-item dropdown-item--danger" onclick="leaveGroup(${group.groupNo})">그룹 탈퇴</button>` : '';
+                    return `
+                    <div class="group-list__item">
+                        <div class="group-list__icon">${group.groupInitial}</div>
+                        <a href="/group/${group.groupNo}" class="group-list__name">${group.groupName}</a>
+                        <div class="group-list__actions">
+                            <button class="actions-btn" onclick="toggleDropdown(event, ${group.groupNo})">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM1.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm13 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"></path></svg>
+                            </button>
+                            <div class="dropdown-menu" id="dropdown-${group.groupNo}">
+                                <button class="dropdown-item" onclick="openGroupManageModal(${group.groupNo}, '${group.groupName}', ${group.leader})">그룹 관리</button>
+                                ${leaveOption}
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+                randomizeGroupIconColors();
+            } catch (error) {
+                console.error('내 그룹 목록 조회 오류:', error);
+                container.innerHTML = `<div style="text-align: center; color: var(--color-danger-fg);">그룹 목록을 불러오지 못했습니다.</div>`;
+            }
+        }
+
+        async function loadMyLiveRooms() {
+            const container = document.getElementById('my-live-rooms-container');
+            container.innerHTML = '<p style="text-align: center; color: var(--color-fg-muted);">라이브 방 목록을 불러오는 중...</p>';
+            try {
+                const response = await fetch('/api/my-live-rooms');
+                if (!response.ok) throw new Error('라이브 방 목록 로드 실패');
+                
+                const myRooms = await response.json();
+                if (myRooms.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: var(--color-fg-muted);">참여중인 방이 없습니다.</p>';
+                    return;
+                }
+                container.innerHTML = myRooms.map(room => {
+                    return `
+                    <div class="group-list__item">
+                        <div class="group-list__icon" style="background-color: #6e7681;">
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="m11.28 3.22 4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.749.749 0 0 1-1.275-.31v-1.94h-1.5a.75.75 0 0 1 0-1.5h1.5v-1.94a.75.75 0 0 1 1.06-.75Zm-8.5 3.5a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Zm0 4a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75Z"></path></svg>
+                        </div>
+                        <a href="/live-room/${room.roomId}" class="group-list__name">${room.roomName}</a>
+                    </div>`;
+                }).join('');
+            } catch (error) {
+                console.error('라이브 방 목록 조회 오류:', error);
+                container.innerHTML = `<div style="text-align: center; color: var(--color-danger-fg);">목록을 불러오지 못했습니다.</div>`;
+            }
+        }
+
+        // --- 모달 및 UI 제어 함수 ---
+        function openModal(modalId) { document.getElementById(modalId)?.classList.add('is-visible'); }
+        function closeModal(modalId) { 
+            const modal = document.getElementById(modalId);
+            if(modal) {
+                modal.classList.remove('is-visible');
+                const form = modal.querySelector('form');
+                if(form) form.reset(); // 모달 닫을 때 폼 초기화
+            }
+        }
+
+        function toggleDropdown(event, groupNo) {
+            event.preventDefault();
+            event.stopPropagation();
+            closeAllDropdowns(groupNo);
+            document.getElementById(`dropdown-${groupNo}`)?.classList.toggle('show');
+        }
+        function closeAllDropdowns(exceptGroupNo = null) {
+            document.querySelectorAll('.dropdown-menu').forEach(dropdown => {
+                if (dropdown.id !== `dropdown-${exceptGroupNo}`) {
+                    dropdown.classList.remove('show');
+                }
+            });
+        }
+        
+        function openCreateGroupModal() {
+            // ... (관련 로직 추가 필요) ...
+            openModal('createGroupModal');
+        }
+        async function openInviteModal() {
+            const inviteListContainer = document.getElementById('inviteList');
+            inviteListContainer.innerHTML = '로딩 중...';
+            openModal('inviteModal'); // 모달 창 열기
+
+            try {
+                // 수정된 API 호출
+                const response = await fetch('/invite/my/ajax-data'); // 순수 JSON 데이터를 반환하는 API가 필요합니다.
+                if (!response.ok) throw new Error('초대 목록 로드 실패');
+                
+                const invites = await response.json();
+
+                if (invites.length === 0) {
+                    inviteListContainer.innerHTML = '<p>받은 초대가 없습니다.</p>';
+                    return;
+                }
+
+                // 초대 유형에 따라 다른 HTML 생성
+                inviteListContainer.innerHTML = invites.map(invite => {
+                    if (invite.inviteType === 'GROUP') {
+                        return `
+                            <div class="invite-item">
+                                <p>'${invite.targetName}' 그룹에서 '${invite.inviterId}'님이 초대했습니다.</p>
+                                <div>
+                                    <button class="btn btn--primary" onclick="acceptGroupInvite(${invite.inviteNo})">수락</button>
+                                    <button class="btn" onclick="rejectGroupInvite(${invite.inviteNo})">거절</button>
+                                </div>
+                            </div>`;
+                    } else if (invite.inviteType === 'LIVEROOM') {
+                        return `
+                             <div class="invite-item" style="background-color: #202d3a;">
+                                <p>'${invite.targetName}' 라이브 룸에서 '${invite.inviterId}'님이 초대했습니다.</p>
+                                <div>
+                                    <button class="btn btn--primary" onclick="acceptLiveRoomInvite(${invite.inviteNo})">수락</button>
+                                    <button class="btn" onclick="rejectLiveRoomInvite(${invite.inviteNo})">거절</button>
+                                </div>
+                            </div>`;
+                    }
+                }).join('');
+
+            } catch (error) {
+                console.error(error);
+                inviteListContainer.innerHTML = '<p style="color:red;">목록을 불러오는데 실패했습니다.</p>';
+            }
+        }
+        
+        
+     // 라이브 룸 초대 수락/거절 함수 (새로 추가)
+        async function acceptLiveRoomInvite(inviteNo) {
+            if(!confirm('라이브 룸 초대를 수락하시겠습니까?')) return;
+            try {
+                const response = await fetch(`/api/live-rooms/invites/${inviteNo}/accept`, { method: 'POST' });
+                const result = await response.json();
+                alert(result.message);
+                if(response.ok) location.reload();
+            } catch(e) {
+                alert('처리 중 오류가 발생했습니다.');
+            }
+        }
+
+        async function rejectLiveRoomInvite(inviteNo) {
+            if(!confirm('라이브 룸 초대를 거절하시겠습니까?')) return;
+             try {
+                const response = await fetch(`/api/live-rooms/invites/${inviteNo}/reject`, { method: 'POST' });
+                const result = await response.json();
+                alert(result.message);
+                if(response.ok) location.reload();
+            } catch(e) {
+                alert('처리 중 오류가 발생했습니다.');
+            }
+        }
+        
+        function openCreateLiveRoomModal() {
+            openModal('createLiveRoomModal');
+        }
+
+        async function openGroupManageModal(groupNo, groupName, isLeader) {
+            targetGroupNo = groupNo;
+            document.getElementById('modal-group-name').textContent = groupName;
+            document.getElementById('leader-actions').style.display = isLeader ? 'block' : 'none';
+            // 리더가 아닐 때도 '그룹 탈퇴' 버튼은 보여야 하므로, 해당 버튼은 leader-actions 밖으로 이동
+             document.querySelector('#groupManageModal .management-actions > .btn').style.display = !isLeader ? 'inline-block' : 'none';
+
+            openModal('groupManageModal');
+
+            const memberListContainer = document.getElementById('modal-member-list');
+            memberListContainer.innerHTML = '<p>멤버를 불러오는 중입니다...</p>';
+            try {
+                const response = await fetch(`/api/group/${groupNo}/members`);
+                if (!response.ok) throw new Error('멤버 목록 로드 실패');
+                const members = await response.json();
+                memberListContainer.innerHTML = members.map(member => {
+                    const roleBadge = member.type === 'L' ? '<span class="role-badge leader">리더</span>' : '<span class="role-badge member">멤버</span>';
+                    const delegateButton = (isLeader && member.type !== 'L') ? `<button class="btn" style="margin-left:8px;" onclick="delegateLeader(targetGroupNo, '${member.memberId}')">위임</button>` : '';
+                    return `<div class="member-item"><span>${member.nickname} (${member.memberId})</span><div>${roleBadge}${delegateButton}</div></div>`;
+                }).join('');
+            } catch (error) {
+                console.error(error);
+                memberListContainer.innerHTML = '<p style="color: red;">멤버 목록을 불러오는 데 실패했습니다.</p>';
+            }
+        }
+
+        function toggleInviteUI(show) {
+            const inviteSection = document.getElementById('inline-invite-section');
+            if (show) {
+                selectedMemberIds = []; // 초대 UI 열 때마다 초기화
+                inviteSection.innerHTML = `
+                    <h5>새 멤버 초대</h5>
+                    <div class="form-group">
+                        <label for="inlineMemberSearch" class="form-group__label">초대할 멤버 검색</label>
+                        <input type="text" id="inlineMemberSearch" placeholder="초대할 멤버 ID 검색" class="form-group__input" oninput="searchMembers(this, 'inline-')" autocomplete="off">
+                        <div id="inline-searchResults" class="search-results-container" style="display: none;"></div>
+                    </div>
+                    <div>
+                        <div class="form-group__label" style="font-size: 12px; color: var(--color-fg-muted);">선택된 멤버:</div>
+                        <div id="inline-selectedMembers" class="selected-members-container"></div>
+                    </div>
+                    <div class="modal__footer" style="justify-content: flex-start; padding-left: 0;">
+                        <button type="button" class="btn btn--primary" onclick="sendInvites()">초대 보내기</button>
+                        <button type="button" class="btn" onclick="toggleInviteUI(false)">취소</button>
+                    </div>`;
+                inviteSection.style.display = 'block';
+            } else {
+                inviteSection.style.display = 'none';
+                inviteSection.innerHTML = '';
+            }
+        }
+
+
+        // --- 서버 통신(Fetch) 함수 ---
+        function submitLiveRoomCreation(event) {
+            event.preventDefault();
+            const roomName = document.getElementById('liveRoomNameInput').value;
+            if (!roomName.trim()) { alert('방 이름을 입력해주세요.'); return; }
+
+            fetch('/api/live-rooms', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roomName: roomName })
+            })
+            .then(response => {
+                if (response.ok) return response.json();
+                else throw new Error('방 생성에 실패했습니다.');
+            })
+            .then(createdRoom => {
+                alert('방이 성공적으로 생성되었습니다!');
+                window.location.href = '/live-room/' + createdRoom.roomId;
+            })
+            .catch(error => {
+                console.error(error);
+                alert(error.message);
+            });
+        }
+        
+        function submitGroupCreation(event) {
+            event.preventDefault();
+
+            if (isInviteMode) {
+                // 초대 모드일 경우
+                if (selectedMemberIds.length === 0) {
+                    alert('초대할 멤버를 선택해주세요.');
+                    return;
+                }
+                const params = new URLSearchParams();
+                selectedMemberIds.forEach(id => params.append('memberIds', id));
+
+                // 새로운 '멤버 초대' API 호출
+                fetch(`/api/group/${targetGroupNo}/invite`, {
+                    method: 'POST',
+                    body: params
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        closeCreateGroupModal();
+                        // 관리 모달의 멤버 목록 새로고침 (선택사항)
+                        openGroupManageModal(targetGroupNo, document.getElementById('modal-group-name').textContent, true);
+                    } else {
+                        alert('초대 실패: ' + data.message);
+                    }
+                });
+
+            } else {
+                // 기존의 그룹 생성 모드일 경우
+                const groupName = document.getElementById('groupNameInput').value;
+                if (!groupName.trim()) {
+                    alert('그룹명을 입력해주세요');
+                    return;
+                }
+                const params = new URLSearchParams();
+                params.append('groupName', groupName);
+                selectedMemberIds.forEach(id => params.append('memberIds', id));
+
+                fetch('/group/create-with-invites', {
+                    method: 'POST',
+                    body: params
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        closeCreateGroupModal();
+                        location.reload();
+                    } else {
+                        alert('그룹 생성 실패: ' + data.message);
+                    }
+                });
+            }
+        }
+
+        function sendInvites() {
+    	    if (selectedMemberIds.length === 0) {
+    	        alert('초대할 멤버를 선택해주세요.');
+    	        return;
+    	    }
+    	    const params = new URLSearchParams();
+    	    selectedMemberIds.forEach(id => params.append('memberIds', id));
+
+    	    // 'targetGroupNo'는 openGroupManageModal에서 설정된 전역 변수
+    	    fetch(`/api/group/${targetGroupNo}/invite`, {
+    	        method: 'POST',
+    	        body: params
+    	    })
+    	    .then(response => response.json())
+    	    .then(data => {
+    	        if (data.success) {
+    	            alert(data.message);
+    	            toggleInviteUI(false); // 성공 후 초대 UI 닫기
+    	            // 멤버 목록 새로고침
+    	            openGroupManageModal(targetGroupNo, document.getElementById('modal-group-name').textContent, true);
+    	        } else {
+    	            alert('초대 실패: ' + data.message);
+    	        }
+    	    });
+    	}
+        
+        //그룹장 위임
+        function delegateLeader(groupNo, newLeaderId) {
+            if (!confirm(newLeaderId + ' 님에게 리더를 위임하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+                return;
+            }
+
+            const params = new URLSearchParams();
+            params.append('newLeaderId', newLeaderId);
+
+            fetch(`/api/group/${groupNo}/delegate`, {
+                method: 'POST',
+                body: params
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                if (data.success) {
+                    location.reload(); // 성공 시 페이지 새로고침
+                }
+            });
+        }
+        
+        //그룹삭제
+        function deleteGroup(groupNo) {
+            if (!confirm('정말로 그룹을 삭제하시겠습니까? 모든 멤버와 게시글이 사라집니다.')) {
+                return;
+            }
+
+            fetch(`/api/group/${groupNo}/delete`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                if (data.success) {
+                    location.reload();
+                }
+            });
+        }
+        
+        //그룹 탈퇴
+        function leaveGroup(groupNo) {
+            if (!confirm('정말로 그룹에서 탈퇴하시겠습니까?')) {
+                return;
+            }
+
+            fetch(`/api/group/${groupNo}/leave`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                if (data.success) {
+                    location.reload();
+                }
+            });
+        }
+       
+        // 초대 수락/거절 함수들
+        function acceptGroupInvite(inviteNo) {
+            if(confirm('초대를 수락하시겠습니까?')) {
+                fetch('/invite/accept', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'inviteNo=' + inviteNo
+                }).then(response => {
+                    if(response.ok) {
+                        closeModal('inviteModal');
+                        location.reload();
+                    } else {
+                        alert('초대 수락에 실패했습니다.');
+                    }
+                });
+            }
+        }
+        
+        function rejectGroupInvite(inviteNo) {
+            if(confirm('초대를 거절하시겠습니까?')) {
+                fetch('/invite/reject', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'inviteNo=' + inviteNo
+                }).then(response => {
+                     if(response.ok) {
+                        closeModal('inviteModal');
+                        location.reload();
+                    } else {
+                        alert('초대 거절에 실패했습니다.');
+                    }
+                });
+            }
+        }
+        
+        
+        function searchMembers(inputElement, prefix = '') {
+            const query = inputElement.value;
+            const searchResultsContainer = document.getElementById(prefix + 'searchResults'); // id로 직접 찾기
+
+            if (query.trim().length < 1) {
+                searchResultsContainer.innerHTML = '';
+                searchResultsContainer.style.display = 'none';
+                return;
+            }
+
+            fetch(`/member/search?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(userIds => {
+                const filteredUserIds = userIds.filter(userId => !selectedMemberIds.includes(userId));
+                
+                if (filteredUserIds.length === 0) {
+                    searchResultsContainer.innerHTML = `<div class="search-result-item--empty">검색 결과가 없습니다.</div>`;
+                } else {
+                    // selectMember 호출 시에도 prefix를 넘겨줍니다.
+                    searchResultsContainer.innerHTML = filteredUserIds.map(userId => `
+                        <div class="search-result-item" onclick="selectMember('${userId}', '${prefix}')">
+                            ${userId}
+                        </div>
+                    `).join('');
+                }
+                searchResultsContainer.style.display = 'block';
+            });
+        }
+
+
+        // --- 기타 유틸리티 함수 ---
+        function selectMember(userId, prefix = '') {
+            if (!selectedMemberIds.includes(userId)) {
+                selectedMemberIds.push(userId);
+                updateSelectedMembersDisplay(prefix); // prefix 전달
+            }
+            // 검색창과 결과창 초기화
+            const memberSearchInput = document.getElementById(prefix ? 'inlineMemberSearch' : 'memberSearch');
+            const searchResultsContainer = document.getElementById(prefix + 'searchResults');
+            
+            if(memberSearchInput) memberSearchInput.value = '';
+            if(searchResultsContainer) {
+                searchResultsContainer.innerHTML = '';
+                searchResultsContainer.style.display = 'none';
+            }
+            if(memberSearchInput) memberSearchInput.focus();
+        }
+        
+        function updateSelectedMembersDisplay(prefix = '') {
+            const container = document.getElementById(prefix + 'selectedMembers');
+            if (!container) return; // 대상이 없으면 종료
+
+            container.innerHTML = selectedMemberIds.map(userId => `
+                <span class="selected-member-tag">
+                    ${userId}
+                    <button type="button" class="selected-member-tag__remove-btn" onclick="removeMember('${userId}', '${prefix}')">&times;</button>
+                </span>
+            `).join('');
+        }
+        
+        function removeMember(userId, prefix = '') {
+            selectedMemberIds = selectedMemberIds.filter(id => id !== userId);
+            updateSelectedMembersDisplay(prefix); // prefix 전달
+        }
+        
+        function randomizeGroupIconColors() {
+    	    const colors = ['#1f6feb', '#238636', '#da3633', '#fd7e14', '#6f42c1', '#0969da'];
+    	    // 동적으로 생성된 아이콘을 찾기 위해 선택자를 '.group-icon'으로 변경합니다.
+    	    const icons = document.querySelectorAll('.group-icon'); 
+    	    icons.forEach((icon, index) => {
+    	        icon.style.backgroundColor = colors[index % colors.length];
+    	    });
+    	}
+        
+    </script>
+</body>
+</html>

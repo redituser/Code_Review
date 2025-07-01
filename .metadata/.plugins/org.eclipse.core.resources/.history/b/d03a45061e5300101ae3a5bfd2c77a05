@@ -1,0 +1,22 @@
+package com.assignment.board.dao;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import com.assignment.board.vo.BoardVO;
+
+//JPA 전용
+@Repository
+public interface BoardRepository extends JpaRepository<BoardVO, Integer>{
+	List<BoardVO> findAll();
+	BoardVO findById(int id);
+	<S extends BoardVO> S save(S entity);
+	List<BoardVO> findByGroupNoOrderByBoardNoDesc(Integer groupNo);
+	List<BoardVO> findByBoardTypeOrderByBoardNoDesc(String boardType);
+	List<BoardVO> findByGroupNoAndBoardTypeOrderByBoardNoDesc(int groupNo, String boardType);
+	List<BoardVO> findByWriterIdOrderByCreateDateDesc(String writerId);
+	 List<BoardVO> findTop5ByOrderByCreateDateDesc();
+
+}

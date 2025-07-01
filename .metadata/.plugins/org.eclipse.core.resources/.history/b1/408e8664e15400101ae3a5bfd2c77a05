@@ -1,0 +1,211 @@
+package com.assignment.board.service;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.assignment.board.dao.BoardMapper;
+import com.assignment.board.dao.BoardRepository;
+import com.assignment.board.vo.BoardVO;
+import com.assignment.like.repository.LikeRepository;
+import com.assignment.like.vo.LikeCountDto;
+
+@Service
+public class BoardService {
+
+	@Autowired
+	private LikeRepository likeRepository;
+
+	@Autowired
+	BoardMapper mapper;
+
+	@Autowired
+	BoardRepository boardRepository;
+
+	public List<BoardVO> selectBoardListAll() {
+		return boardRepository.findAll();
+	}
+
+	public BoardVO selectBoardOne(Integer boardNo) {
+		return boardRepository.findById(boardNo)
+				.orElseThrow(() -> new IllegalArgumentException("해당 게시글을 찾을 수 없습니다. ID: " + boardNo));
+	}
+
+
+
+	public BoardVO editOrInsertBoard(BoardVO board) {
+		return boardRepository.save(board);
+	}
+
+	public void deleteBoard(Integer BoardNo) {
+		boardRepository.deleteById(BoardNo);
+	}
+
+	public List<BoardVO> getBoardsByGroupNo(Integer groupNo) {
+		return boardRepository.findByGroupNoOrderByBoardNoDesc(groupNo);
+	}
+
+	public List<BoardVO> selectPublicBoardListAll() {
+		return boardRepository.findByBoardTypeOrderByBoardNoDesc("PUBLIC");
+	}
+
+	public List<BoardVO> findByGroupNoAndBoardTypeOrderByBoardNoDesc(Integer groupNo, String boardType) {
+		return boardRepository.findByGroupNoAndBoardTypeOrderByBoardNoDesc(groupNo, boardType);
+	}
+
+	@Transactional(readOnly = true)
+	public List<BoardVO> getPostsByWriterId(String writerId) {
+		// 1. 작성자 ID로 게시글 목록을 가져옵니다.
+		List<BoardVO> posts = boardRepository.findByWriterIdOrderByCreateDateDesc(writerId);
+
+		// 2. 게시글 목록이 비어있지 않다면, 좋아요 수를 채우는 로직을 실행합니다.
+		if (!posts.isEmpty()) {
+			// 3. 게시글 목록에서 boardNo만 추출하여 리스트를 만듭니다.
+			List<Integer> boardNos = posts.stream().map(BoardVO::getBoardNo).collect(Collectors.toList());
+
+			// 4. Repository 메소드를 호출하여 한번의 쿼리로 모든 좋아요 수를 가져옵니다.
+			List<LikeCountDto> likeCounts = likeRepository.findLikeCountsForBoardNos(boardNos);
+
+			// 5. 빠른 조회를 위해 'boardNo'를 key로, 'likeCount'를 value로 하는 Map으로 변환합니다.
+			Map<Integer, Long> likeCountMap = likeCounts.stream()
+					.collect(Collectors.toMap(LikeCountDto::getBoardNo, LikeCountDto::getLikeCount));
+
+			// 6. 각 게시글(post)을 순회하며 Map에서 자신의 좋아요 수를 찾아 설정합니다.
+			posts.forEach(post -> post.setLikeCount(likeCountMap.getOrDefault(post.getBoardNo(), 0L)));
+		}
+
+		return posts;
+	}
+
+	/**
+	 * 모든 게시글을 페이징하여 조회하고, 각 게시글의 좋아요 수를 포함하여 반환합니다.
+	 * 
+	 * @param pageable 페이징 및 정렬 정보
+	 * @return 페이징된 게시글 정보 (Page<BoardVO>)
+	 */
+	@Transactional(readOnly = true)
+	public Page<BoardVO> getBoardPage(Pageable pageable) {
+		// 1. 페이징된 게시글 목록을 DB에서 가져오고
+		Page<BoardVO> boardPage = boardRepository.findAll(pageable);
+		List<BoardVO> posts = boardPage.getContent();
+
+		// 2. 게시글 목록이 비어있지 않다면, 좋아요 수를 채우는 로직을 실행
+		if (!posts.isEmpty()) {
+			List<Integer> boardNos = posts.stream().map(BoardVO::getBoardNo).collect(Collectors.toList());
+
+			List<LikeCountDto> likeCounts = likeRepository.findLikeCountsForBoardNos(boardNos);
+
+			Map<Integer, Long> likeCountMap = likeCounts.stream()
+					.collect(Collectors.toMap(LikeCountDto::getBoardNo, LikeCountDto::getLikeCount));
+
+			posts.forEach(post -> post.setLikeCount(likeCountMap.getOrDefault(post.getBoardNo(), 0L)));
+		}
+
+		return boardPage;
+	}
+
+	 @Transactional(readOnly = true)
+	    public List<BoardVO> getRecentPosts() {
+	        List<BoardVO> posts = boardRepository.findTop5ByOrderByCreateDateDesc();
+	        if (!posts.isEmpty()) {
+	            populateLikeCounts(posts); // 중복 로직 대신 헬퍼 메서드 호출
+	        }
+	        return posts;
+	    }
+
+
+	   @Transactional(readOnly = true)
+	    public Page<BoardVO> getPopularBoardPage(Pageable pageable) {
+	        Page<Integer> boardIdsPage = boardRepository.findPopularBoardIds(pageable);
+	        List<Integer> boardIds = boardIdsPage.getContent();
+	        if (boardIds.isEmpty()) {
+	            return Page.empty(pageable);
+	        }
+	        List<BoardVO> posts = boardRepository.findAllById(boardIds);
+	        Map<Integer, BoardVO> boardMap = posts.stream().collect(Collectors.toMap(BoardVO::getBoardNo, post -> post));
+	        List<BoardVO> sortedPosts = boardIds.stream().map(boardMap::get).collect(Collectors.toList());
+	        
+	        populateLikeCounts(sortedPosts); // 중복 로직 대신 헬퍼 메서드 호출
+
+	        return new PageImpl<>(sortedPosts, pageable, boardIdsPage.getTotalElements());
+	    }
+
+	@Transactional(readOnly = true)
+	public List<BoardVO> getTop5PopularPosts() {
+		// 1단계: 인기 게시글 Top 5의 ID 목록을 가져옵니다.
+		Page<Integer> top5IdsPage = boardRepository.findPopularBoardIds(PageRequest.of(0, 5));
+		List<Integer> top5Ids = top5IdsPage.getContent();
+
+		if (top5Ids.isEmpty()) {
+			return List.of(); // 빈 리스트 반환
+		}
+
+		// 2단계: ID 목록으로 실제 게시글 정보를 조회하고 정렬합니다.
+		List<BoardVO> posts = boardRepository.findAllById(top5Ids);
+		Map<Integer, BoardVO> boardMap = posts.stream().collect(Collectors.toMap(BoardVO::getBoardNo, post -> post));
+		List<BoardVO> sortedPosts = top5Ids.stream().map(boardMap::get).collect(Collectors.toList());
+
+		// 3단계: 좋아요 수를 채워줍니다.
+		populateLikeCounts(sortedPosts);
+
+		return sortedPosts;
+	}
+
+	private void populateLikeCounts(List<BoardVO> posts) {
+		// 게시글 목록에서 boardNo만 추출하여 리스트를 만듭니다.
+		List<Integer> boardNos = posts.stream().map(BoardVO::getBoardNo).collect(Collectors.toList());
+
+		// Repository 메소드를 호출하여 한번의 쿼리로 모든 좋아요 수를 가져옵니다.
+		List<LikeCountDto> likeCounts = likeRepository.findLikeCountsForBoardNos(boardNos);
+
+		// 빠른 조회를 위해 'boardNo'를 key로, 'likeCount'를 value로 하는 Map으로 변환합니다.
+		Map<Integer, Long> likeCountMap = likeCounts.stream()
+				.collect(Collectors.toMap(LikeCountDto::getBoardNo, LikeCountDto::getLikeCount));
+
+		// 각 게시글(post)을 순회하며 Map에서 자신의 좋아요 수를 찾아 설정합니다.
+		posts.forEach(post -> post.setLikeCount(likeCountMap.getOrDefault(post.getBoardNo(), 0L)));
+	}
+
+	public List<BoardVO> getAnswersForQuestion(int questionNo) {
+		return boardRepository.findByParentBoardNoOrderByCreateDateAsc(questionNo);
+	}
+
+	@Transactional // ★ 데이터 변경이 있으므로 트랜잭션 처리 필수
+	public void acceptAnswer(int questionNo, int answerNo) {
+		// 1. 질문 게시글을 DB에서 조회합니다.
+		Optional<BoardVO> questionOpt = boardRepository.findById(questionNo);
+		if (questionOpt.isPresent()) {
+			BoardVO question = questionOpt.get();
+
+			// (추가적인 방어 로직) 채택하려는 답변이 이 질문의 답변이 맞는지 확인
+			BoardVO answer = selectBoardOne(answerNo);
+			if (answer != null && answer.getParentBoardNo() != null && answer.getParentBoardNo().equals(questionNo)) {
+				// 2. 질문 객체에 채택된 답변의 번호를 저장합니다.
+				question.setAcceptedAnswerNo(answerNo);
+				// 3. 변경된 질문 객체를 저장합니다. (JPA의 변경 감지(Dirty Checking)에 의해 자동으로 UPDATE 쿼리 발생)
+				boardRepository.save(question);
+			} else {
+				throw new IllegalArgumentException("해당 질문에 대한 답변이 아닙니다.");
+			}
+		} else {
+			throw new IllegalArgumentException("존재하지 않는 질문입니다.");
+		}
+	}
+
+	public boolean isBoardOwner(int boardNo, String loginId) {
+		if (loginId == null)
+			return false;
+		BoardVO board = selectBoardOne(boardNo);
+		return board != null && loginId.equals(board.getWriterId());
+	}
+
+}

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{question.boardTitle}} - CODE CIRCLE</title>
+    <style>
+        /* 기본 스타일 */
+        body { background-color: #0d1117; color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 24px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .btn { border: 1px solid #30363d; padding: 5px 12px; border-radius: 6px; cursor: pointer; background-color: #21262d; color: #e6edf3; font-weight: 500; }
+        .btn:hover { background-color: #30363d; }
+        .btn-primary { background-color: #238636; border-color: #238636; color: white; }
+        .btn-primary:hover { background-color: #2ea043; }
+        .btn-sm { padding: 3px 10px; font-size: 12px; }
+        .form-control { width: 100%; padding: 8px 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #e6edf3; font-size: 14px; box-sizing: border-box; }
+        .form-actions { margin-top: 10px; text-align: right; }
+
+        /* Q&A 레이아웃 */
+        .question-container { border: 1px solid #30363d; border-radius: 6px; background-color: #161b22; padding: 24px; margin-bottom: 24px; }
+        .question-title { font-size: 28px; margin-bottom: 8px; font-weight: 600; }
+        .post-meta { font-size: 12px; color: #7d8590; margin-bottom: 20px; }
+        .post-content { line-height: 1.7; word-wrap: break-word; }
+        .post-content pre { background-color: #0d1117; padding: 16px; border-radius: 6px; white-space: pre-wrap; }
+
+        .answers-container { margin-top: 32px; }
+        .answers-count { padding-bottom: 12px; border-bottom: 1px solid #21262d; margin-bottom: 16px; font-weight: 600; font-size: 18px; }
+
+        .answer-item { border: 1px solid #30363d; border-radius: 6px; margin-bottom: 16px; background: #0d1117; position: relative; transition: border-color 0.3s; }
+        .answer-header { display: flex; justify-content: space-between; align-items: center; background-color: #161b22; padding: 8px 16px; border-bottom: 1px solid #30363d; font-size: 12px; color: #7d8590; }
+        .answer-author { font-weight: bold; color: #e6edf3; }
+        .answer-actions { display: flex; align-items: center; gap: 8px; }
+        .answer-item .post-content { padding: 16px; }
+
+        /* 채택된 답변 스타일 */
+        .answer-item.is-accepted { border-color: #238636; box-shadow: 0 0 10px rgba(35, 134, 54, 0.5); }
+        .accepted-badge { padding: 8px 16px; background-color: rgba(35, 134, 54, 0.15); color: #2ea043; font-weight: bold; font-size: 12px; border-bottom: 1px solid #238636; display: flex; align-items: center; gap: 6px; }
+        .accepted-badge svg { width: 16px; height: 16px; fill: currentColor; }
+
+        .btn-accept { background-color: transparent; border-color: #238636; color: #2ea043; }
+        .btn-accept:hover { background-color: #238636; color: white; }
+
+        .new-answer-form { margin-top: 32px; padding-top: 24px; border-top: 1px solid #30363d; }
+        .new-answer-form h4 { margin: 0 0 12px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="question-container">
+            <h1 class="question-title">{{question.boardTitle}}</h1>
+            <div class="post-meta">
+                작성자: {{question.writerId}} | 작성일: {{question.createDate}}
+                {{#question.groupNo}} | 그룹: {{question.groupNo}} {{/question.groupNo}}
+            </div>
+            <div class="post-content">
+                {{{question.boardContent}}} </div>
+        </div>
+
+        <div class="answers-container">
+            <h3 class="answers-count">{{answers.size}}개의 답변</h3>
+
+            {{#answers}}
+            <div class="answer-item {{#isAccepted}}is-accepted{{/isAccepted}}">
+                {{#isAccepted}}
+                <div class="accepted-badge">
+                    <svg viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path></svg>
+                    채택된 답변
+                </div>
+                {{/isAccepted}}
+                <div class="answer-header">
+                    <span class="answer-author">{{writerId}}</span> 님이 답변함
+                    <div class="answer-actions">
+                        {{#isQuestionOwner}}
+                            {{^isAccepted}}
+                            <button class="btn btn-sm btn-accept" onclick="acceptAnswer({{question.boardNo}}, {{boardNo}})">
+                                답변으로 채택
+                            </button>
+                            {{/isAccepted}}
+                        {{/isQuestionOwner}}
+                    </div>
+                </div>
+                <div class="post-content">
+                    {{{boardContent}}}
+                </div>
+            </div>
+            {{/answers}}
+            {{^answers}}
+            <p style="text-align: center; color: #7d8590; padding: 20px 0;">아직 등록된 답변이 없습니다.</p>
+            {{/answers}}
+        </div>
+
+        <div class="new-answer-form">
+            <h4>내 답변 등록하기</h4>
+            <form action="/board/{{question.boardNo}}/answer" method="post">
+                <textarea name="boardContent" class="form-control" rows="6" placeholder="자세한 답변을 작성해주세요. 코드 블록을 사용할 수 있습니다."></textarea>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">답변 등록</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        async function acceptAnswer(questionNo, answerNo) {
+            if (!confirm('이 답변을 최종 답변으로 채택하시겠습니까?')) return;
+
+            try {
+                const response = await fetch(`/board/${questionNo}/accept/${answerNo}`, {
+                    method: 'POST'
+                    // CSRF 토큰이 필요하다면 headers에 추가
+                });
+
+                if (!response.ok) {
+                    throw new Error('서버 응답이 올바르지 않습니다.');
+                }
+                
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(result.message);
+                    location.reload(); // 성공 시 페이지를 새로고침하여 채택 상태를 반영
+                } else {
+                    alert('오류: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('답변 채택 중 오류가 발생했습니다.');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>CODE CIRCLE - {{board.boardTitle}}</title>
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet" />
+
+    <style>
+        /* 기본 스타일 */
+        body { background-color: #0d1117; color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        .container { max-width: 1200px; margin: 20px auto; padding: 20px; }
+        .post-header { padding-bottom: 12px; border-bottom: 1px solid #30363d; margin-bottom: 24px; }
+        h1 { font-size: 24px; margin: 0; }
+        p.meta { font-size: 14px; color: #7d8590; }
+
+        /* 코드 리뷰 UI 레이아웃 */
+        .code-review-container {
+            display: flex;
+            position: relative;
+            gap: 20px; /* 코드와 댓글 영역 사이 간격 */
+        }
+        
+        .code-view-wrapper {
+            flex: 3; /* 코드 영역이 더 넓게 */
+            position: relative;
+        }
+
+        .comment-threads-wrapper {
+            flex: 2; /* 댓글 영역 */
+            max-height: 600px; /* 댓글이 많아지면 스크롤 */
+            overflow-y: auto;
+        }
+
+        /* Prism.js 코드 블록 스타일 */
+        pre[class*="language-"].line-numbers {
+            position: relative;
+            padding-left: 3.8em;
+            counter-reset: linenumber;
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+        }
+
+        /* 각 라인에 마우스 오버 시 상호작용을 위한 스타일 */
+        .line-numbers .line-highlight {
+            position: relative; /* + 버튼의 위치 기준 */
+            display: block;
+        }
+        
+        .line-add-comment {
+            position: absolute;
+            left: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            background-color: #1f6feb;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: none; /* 평소에는 숨김 */
+            text-align: center;
+            line-height: 20px;
+            font-weight: bold;
+            z-index: 10;
+        }
+        .line-numbers .line-highlight:hover .line-add-comment {
+            display: block; /* 마우스 올렸을 때만 표시 */
+        }
+        
+        /* 댓글 입력 폼 */
+        .comment-form {
+            background: #21262d; border: 1px solid #30363d; border-radius: 6px;
+            padding: 10px; margin-bottom: 15px;
+        }
+        .comment-form textarea {
+            width: 100%; height: 60px; background: #0d1117; border: 1px solid #30363d;
+            border-radius: 6px; color: #e6edf3; padding: 8px; margin-bottom: 8px; box-sizing: border-box;
+        }
+        .comment-form button {
+            border: 1px solid #30363d; padding: 5px 12px; border-radius: 6px; cursor: pointer;
+        }
+        
+        /* 댓글 버블 */
+        .comment-bubble {
+            background: #161b22; border: 1px solid #30363d; border-radius: 6px;
+            padding: 12px; margin-top: 8px;
+        }
+        .comment-bubble .author { font-weight: bold; color: #7d8590; font-size: 12px; }
+        .comment-bubble .content { margin-top: 6px; font-size: 14px; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="post-header">
+            <h1>{{board.boardTitle}}</h1>
+            <p class="meta">작성자: {{board.writerId}} | 그룹: {{board.groupNo}} | 카테고리: {{board.boardCategory}}</p>
+        </div>
+        
+        <div class="code-review-container">
+            <div class="code-view-wrapper">
+                <pre class="line-numbers"><code class="language-java">{{board.boardContent}}</code></pre>
+            </div>
+            <div id="comment-threads" class="comment-threads-wrapper">
+                </div>
+        </div>
+        
+        </div>
+        
+            <hr style="margin-top: 40px; border-color: #30363d;">
+	<div class="conversation-container">
+	    <h3>Conversation</h3>
+	    <div id="general-comment-list">
+	        </div>
+	    <div class="comment-form" style="margin-top: 20px;">
+	        <form id="general-comment-form">
+	            <textarea id="general-comment-textarea" placeholder="전체 코드에 대한 의견을 남겨주세요..."></textarea>
+	            <div style="text-align: right; margin-top: 8px;">
+	                <button type="submit" class="save-btn">댓글 작성</button>
+	            </div>
+	        </form>
+	    </div>
+	</div>
+	
+	<div class="like-section" style="margin-top: 20px; text-align: center;">
+    <button id="likeButton" class="btn" data-board-no="{{board.boardNo}}">
+        <span id="likeIcon">♡</span> 좋아요
+    </button>
+    <span id="likeCount" style="margin-left: 10px;">{{board.likeCount}}</span> </div>
+	
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-highlight/prism-line-highlight.min.js"></script>
+
+    <script>
+        const boardNo = {{board.boardNo}};
+        const commentContainer = document.getElementById('comment-threads');
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            Prism.highlightAll();
+            await loadLineComments();
+            setupLineCommentButtons();
+            await loadGeneralComments();
+            await loadLikeStatus();
+            const likeButton = document.getElementById('likeButton');
+            if (likeButton) {
+                likeButton.addEventListener('click', handleLikeClick);
+            }
+        });
+
+        async function loadLineComments() {
+            const response = await fetch(`/api/board/${boardNo}/comments`);
+            const comments = await response.json();
+            
+            commentContainer.innerHTML = ''; 
+            
+            const commentsByLine = comments.reduce((acc, comment) => {
+                (acc[comment.lineNumber] = acc[comment.lineNumber] || []).push(comment);
+                return acc;
+            }, {});
+
+            for (const lineNumber in commentsByLine) {
+                const threadDiv = document.createElement('div');
+                threadDiv.id = `line-thread-${lineNumber}`;
+                threadDiv.innerHTML = `<strong style="color: #7d8590;">Line ${lineNumber}</strong>`;
+                
+                commentsByLine[lineNumber].forEach(comment => {
+                    threadDiv.appendChild(createCommentBubble(comment));
+                });
+                commentContainer.appendChild(threadDiv);
+            }
+        }
+
+        function setupLineCommentButtons() {
+            const codeLines = document.querySelectorAll('.line-numbers .line-highlight');
+            codeLines.forEach((line, index) => {
+                const lineNumber = index + 1;
+                const button = document.createElement('button');
+                button.className = 'line-add-comment';
+                button.textContent = '+';
+                button.onclick = (e) => { 
+                    e.stopPropagation(); // 이벤트 버블링 방지
+                    showCommentForm(lineNumber);
+                };
+                line.appendChild(button);
+            });
+        }
+        
+        function showCommentForm(lineNumber) {
+            const existingForm = document.querySelector('.comment-form');
+            if (existingForm) existingForm.remove();
+            
+            let targetThread = document.getElementById(`line-thread-${lineNumber}`);
+            if (!targetThread) {
+                targetThread = document.createElement('div');
+                targetThread.id = `line-thread-${lineNumber}`;
+                targetThread.innerHTML = `<strong style="color: #7d8590;">Line ${lineNumber}</strong>`;
+                commentContainer.appendChild(targetThread);
+            }
+
+            const form = document.createElement('div');
+            form.className = 'comment-form';
+            form.innerHTML = `
+                <textarea placeholder="댓글을 입력하세요..."></textarea>
+                <div>
+                    <button class="save-btn">저장</button>
+                    <button type="button" class="cancel-btn">취소</button>
+                </div>
+            `;
+            
+            targetThread.appendChild(form);
+            form.querySelector('textarea').focus();
+
+            form.querySelector('.save-btn').onclick = async () => {
+                const content = form.querySelector('textarea').value;
+                if (!content.trim()) return alert('내용을 입력해주세요.');
+                await saveLineComment(lineNumber, content);
+                await loadLineComments();
+            };
+            form.querySelector('.cancel-btn').onclick = () => form.remove();
+        }
+
+        async function saveLineComment(lineNumber, content) {
+            await fetch(`/api/board/${boardNo}/comments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    lineNumber: lineNumber,
+                    commentContent: content
+                })
+            });
+        }
+        
+        function createCommentBubble(comment) {
+            
+            const authorId = comment.writerId || comment.memberId; 
+            const bubble = document.createElement('div');
+            bubble.className = 'comment-bubble';
+            bubble.innerHTML =  `
+            	<div class="author">${authorId} 님이 작성:</div>
+                <div class="content">${comment.commentContent}</div>`;
+            return bubble;
+            
+        }
+        
+        
+        const generalCommentList = document.getElementById('general-comment-list');
+        const generalCommentForm = document.getElementById('general-comment-form');
+
+
+        // 폼 제출 이벤트 처리
+        generalCommentForm.addEventListener('submit', async (e) => {
+            e.preventDefault(); // 폼 기본 제출 동작 방지
+            const textarea = document.getElementById('general-comment-textarea');
+            const content = textarea.value;
+            if (!content.trim()) return alert('댓글 내용을 입력해주세요.');
+
+            await saveGeneralComment(content);
+            textarea.value = ''; // 입력창 비우기
+            await loadGeneralComments(); // 목록 새로고침
+        });
+
+        // 전체 댓글 목록을 불러오는 함수
+        async function loadGeneralComments() {
+            const response = await fetch(`/api/board/${boardNo}/general-comments`);
+            const comments = await response.json();
+            generalCommentList.innerHTML = '';
+            comments.forEach(comment => {
+                generalCommentList.appendChild(createCommentBubble(comment)); // 라인 댓글 버블 생성 함수 재활용
+            });
+        }
+
+        // 새 전체 댓글을 저장하는 함수
+        async function saveGeneralComment(content) {
+            await fetch(`/api/board/${boardNo}/general-comments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ commentContent: content })
+            });
+        }
+        
+    </script>
+	
+    
+</body>
+</html>

@@ -1,0 +1,61 @@
+package com.assignment.like.vo;
+
+import java.time.LocalDateTime;
+import java.util.Date;
+
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
+import com.assignment.board.vo.BoardVO;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.SequenceGenerator;
+import jakarta.persistence.Table;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
+import jakarta.persistence.UniqueConstraint;
+import lombok.Getter;
+import lombok.Setter;
+
+@Entity
+@Getter
+@Setter
+@Table(name = "CC_LIKE" , uniqueConstraints = {
+		@UniqueConstraint(columnNames = {"BOARD_NO" , "MEMBER_ID"})
+})
+public class Like {
+
+		@Id
+		@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "SEQ_CC_LIKE_NO")//시퀀스 값 설정인가?
+		@SequenceGenerator(name = "SEQ_CC_LIKE_NO" , sequenceName = "SEQ_CC_LIKE_NO"  , allocationSize = 1) // 무슨 의미?
+		@Column(name = "LIKE_NO")//칼럼이랑 매핑
+		private Long likeNo;
+		
+		@ManyToOne(fetch = FetchType.LAZY) // ??
+		@JoinColumn(name = "BOARD_NO" , nullable = false)//널이 아니면서 보드 넘버랑 매핑?
+		@OnDelete(action = OnDeleteAction.CASCADE)//보드 삭제시 좋아요도 같이 삭제
+		private BoardVO board;
+		
+		@Column(name = "LIKE_TYPE" , nullable = false)
+		private char likeType = 'L';
+		
+		@time
+		@Column(name = "CREATE_DATE" , nullable = false, updatable = false)//updatable ? 무엇을 뜻하는거지
+		private LocalDateTime createDate = new Date();
+		
+		
+		
+		
+		
+		
+		
+		
+	
+}

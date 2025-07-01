@@ -1,0 +1,79 @@
+package com.assignment.member.service;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.assignment.member.dao.MemberRepository;
+import com.assignment.member.vo.MemberVO;
+
+@Service
+public class MemberService {
+
+	@Autowired
+	MemberRepository repository;
+
+	public boolean login(String id, String password) {
+
+		Optional<MemberVO> optional = repository.findById(id);
+		if (optional.isPresent()) {
+			MemberVO member = optional.get();
+			return member.getPassword().equals(password);
+		}
+		return false;
+
+	}
+	
+	public void modifyMember(MemberVO vo) {
+		repository.save(vo);
+	}
+	
+
+	public boolean createAccount(MemberVO vo) {
+		if(repository.existsById(vo.getId())) {//중복 회원 방지
+			return false;
+		}
+		
+		repository.save(vo);
+		return true;
+
+	}
+
+	public void deleteAccount(MemberVO vo) {
+		repository.delete(vo);
+	}
+	
+	
+	
+	public List<String> searchMembersByNickName(String query) {
+	    // 대소문자 구분 없이 ID나 닉네임에서 검색
+	    return repository.findByNickNameContaining(query)
+	    		.stream()
+	    		.map(MemberVO::getId)
+	    		.collect(Collectors.toList());
+	}
+	
+	
+	 public boolean registerMember(MemberVO vo) {
+	        if (repository.existsById(vo.getId())) {
+	            return false;
+	        }
+	        repository.save(vo);
+	        return true;
+	    }
+
+	 public List<MemberVO> findAllWithFaceEmbeddings() {
+		         return repository.findAllByFaceEmbeddingIsNotNull(); // 'repository'로 수정
+		 }
+	
+	
+	
+	
+	
+	
+
+}

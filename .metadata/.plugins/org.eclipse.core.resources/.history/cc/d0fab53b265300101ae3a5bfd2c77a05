@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CODE CIRCLE - 인기 게시글</title>
+    </head>
+<body>
+    <div class="container">
+        <h1>인기 게시글</h1>
+        <div class="post-list"> ... </div>
+
+        <div class="pagination">
+            {{^boardPage.first}}
+            <a href="/board/popular?page={{boardPage.number}}">&laquo; 이전</a> {{/boardPage.first}}
+            ...
+            {{^boardPage.last}}
+            <a href="/board/popular?page={{boardPage.number | plus2}}">다음 &raquo;</a> {{/boardPage.last}}
+        </div>
+    </div>
+</body>
+</html>

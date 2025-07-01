@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<title>{{room.roomName}} - CODE CIRCLE</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/dracula.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/lint/lint.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/hint/show-hint.min.css">
+
+
+<style>
+	/* === 기본 및 전역 설정 === */
+	:root {
+		--color-bg-default: #0d1117;
+		--color-bg-subtle: #161b22;
+		--color-border-default: #30363d;
+		--color-text-default: #e6edf3;
+		--color-text-muted: #7d8590;
+		--color-accent-primary: #1f6feb;
+		--color-accent-success: #238636;
+		--color-accent-success-hover: #2ea043;
+		--color-accent-danger: #da3633;
+		--color-accent-danger-hover: #f85149;
+		--font-family-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI',
+			'Noto Sans', Helvetica, Arial, sans-serif;
+		--font-family-mono: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo,
+			monospace;
+	}
+	
+	* {
+		box-sizing: border-box;
+	}
+	
+	body {
+		font-family: var(--font-family-sans);
+		background: var(--color-bg-default);
+		color: var(--color-text-default);
+		margin: 0;
+		overflow: hidden; /* 전체 스크롤 방지 */
+	}
+	
+	/* === 레이아웃 === */
+	.live-container {
+		display: flex;
+		height: 100vh;
+	}
+	
+	.main-content {
+		flex-grow: 1;
+		display: flex; /* CodeMirror가 높이를 채우도록 */
+	}
+	
+	.sidebar {
+		width: 300px;
+		background: var(--color-bg-subtle);
+		border-right: 1px solid var(--color-border-default);
+		display: flex;
+		flex-direction: column;
+		transition: transform 0.3s ease-in-out;
+		position: fixed;
+		left: 0;
+		top: 0;
+		height: 100%;
+		z-index: 1001;
+		transform: translateX(-100%);
+	}
+	
+	.sidebar.open {
+		transform: translateX(0);
+	}
+	
+	.overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: rgba(0, 0, 0, 0.5);
+		z-index: 1000;
+		display: none;
+	}
+	
+	.overlay.active {
+		display: block;
+	}
+	
+	/* === 패널 스타일 === */
+	.panel {
+		background: var(--color-bg-subtle);
+		border: 1px solid var(--color-border-default);
+		border-radius: 6px;
+		display: flex;
+		flex-direction: column;
+	}
+	
+	.panel-header {
+		padding: 0.8rem 1rem;
+		border-bottom: 1px solid var(--color-border-default);
+		font-weight: 600;
+	}
+	
+	/* === CodeMirror 에디터 패널 === */
+	.editor-panel {
+		flex-grow: 1;
+		display: flex;
+		flex-direction: column;
+		border: none;
+		border-radius: 0;
+	}
+	
+	.CodeMirror {
+		font-family: var(--font-family-mono);
+		font-size: 14px;
+		height: auto; /* flex-grow로 높이 조절 */
+		flex-grow: 1;
+	}
+	
+	/* === 사이드바 내부 요소 === */
+	#participantList {
+		list-style: none;
+		padding: 0.8rem 1rem;
+		margin: 0;
+		flex-grow: 1;
+		overflow-y: auto;
+	}
+	
+	#participantList li {
+		padding: 0.5rem 0;
+		color: var(--color-text-muted);
+	}
+	
+	#participantList li.participant-item {
+		color: var(--color-text-default);
+	}
+	
+	.room-controls {
+		padding: 1rem;
+		border-top: 1px solid var(--color-border-default);
+	}
+	
+	.control-group {
+		margin-bottom: 1.2rem;
+	}
+	
+	.control-group p {
+		margin: 0 0 0.5rem 0;
+		font-weight: 600;
+	}
+	
+	.control-group input[type="text"] {
+		width: 100%;
+		padding: 0.5rem;
+		background: var(--color-bg-default);
+		border: 1px solid var(--color-border-default);
+		color: var(--color-text-default);
+		border-radius: 6px;
+		transition: border-color 0.2s, box-shadow 0.2s;
+	}
+	
+	.control-group input[type="text"]:focus {
+		border-color: var(--color-accent-primary);
+		box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.3);
+		outline: none;
+	}
+	
+	.btn {
+		width: 100%;
+		margin-top: 0.5rem;
+		padding: 0.6rem;
+		color: white;
+		border: none;
+		border-radius: 6px;
+		cursor: pointer;
+		font-weight: 600;
+		transition: background-color 0.2s;
+	}
+	
+	.btn-success {
+		background-color: var(--color-accent-success);
+	}
+	
+	.btn-success:hover {
+		background-color: var(--color-accent-success-hover);
+	}
+	
+	.btn-danger {
+		background-color: var(--color-accent-danger);
+	}
+	
+	.btn-danger:hover {
+		background-color: var(--color-accent-danger-hover);
+	}
+	
+	#sidebarToggle {
+		position: fixed;
+		top: 1rem;
+		left: 1rem;
+		z-index: 1002;
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 5px;
+	}
+</style>
+</head>
+<body>
+	<button id="sidebarToggle">
+		<svg viewBox="0 0 100 80" width="25" height="25" fill="#e6edf3">
+            <rect width="100" height="15" rx="8"></rect>
+            <rect y="30" width="100" height="15" rx="8"></rect>
+            <rect y="60" width="100" height="15" rx="8"></rect>
+        </svg>
+	</button>
+
+	<div id="overlay" class="overlay"></div>
+
+	<div class="live-container">
+
+		<div id="sidebar" class="sidebar">
+			<div class="panel-header">참여자 목록 &amp; 메뉴</div>
+			<ul id="participantList" style="flex-grow: 1; overflow-y: auto;">
+				<li>목록을 불러오는 중...</li>
+			</ul>
+
+			<div class="room-controls">
+
+				<div class="control-group">
+					<p>멤버 초대</p>
+					<input type="text" id="inviteMemberId" placeholder="초대할 멤버 ID">
+					<button id="inviteButton" class="btn btn-success">초대하기</button>
+				</div>
+
+				<div class="control-group">
+					<button id="leaveButton" class="btn btn-danger">방 나가기</button>
+				</div>
+
+				{{#isCreator}}
+				<div class="control-group">
+					<p style="margin-top: 1rem; border-top: 1px solid var(--color-border-default); padding-top: 1.2rem;">방장 메뉴</p>
+					<button id="deleteRoomButton" class="btn btn-danger" style="background-color: #8b2927;">방 삭제하기</button>
+				</div>
+				{{/isCreator}}
+			</div>
+		</div>
+
+		<div class="main-content">
+			<div class="editor-panel">
+				<div class="panel-header">{{room.roomName}}</div>
+				<textarea id="codeEditor" th:text="${room.currentCode}"></textarea>
+			</div>
+		</div>
+
+	</div>
+
+
+	<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/javascript/javascript.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/clike/clike.min.js"></script> <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/python/python.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/sql/sql.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/edit/matchbrackets.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/edit/closebrackets.min.js"></script>
+
+	<script th:inline="javascript">
+    /*<![CDATA[*/
+
+    // === 전역 변수 ===
+    const roomId = {{room.roomId}};
+    const loginId = /*[[${loginId}]]*/ 'default_user_id';
+    const creatorId = '{{room.creatorId}}';
+    let stompClient = null;
+    let codeMirrorEditor = null;
+
+
+    // === DOM 로드 완료 후 실행 ===
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeCodeMirror();
+        setupEventListeners();
+        connectToWebSocket();
+        loadParticipants();
+    });
+
+
+    // === 초기화 함수 ===
+
+    function initializeCodeMirror() {
+        const editorTextarea = document.getElementById('codeEditor');
+        codeMirrorEditor = CodeMirror.fromTextArea(editorTextarea, {
+            lineNumbers: true,
+            mode: "text/x-java", // Java 모드로 설정 (MIME 타입)
+            theme: "dracula",
+            matchBrackets: true,
+            autoCloseBrackets: true,
+            indentUnit: 4 // 들여쓰기 4칸
+        });
+
+        // CodeMirror 내용 변경 시 이벤트 리스너
+        codeMirrorEditor.on('change', (instance, changeObj) => {
+        	console.log("CodeMirror 'change' 이벤트 발생!", changeObj.origin);
+            // 다른 사람에 의해 코드가 변경된 경우는 제외 (무한 루프 방지)
+            if (changeObj.origin !== 'setValue') {
+            	 console.log("sendCodeUpdate() 함수를 호출합니다.");
+                sendCodeUpdate();
+            }
+        });
+    }
+
+    function setupEventListeners() {
+        document.getElementById('inviteButton').addEventListener('click', inviteMember);
+        document.getElementById('leaveButton').addEventListener('click', leaveRoom);
+        
+        const deleteBtn = document.getElementById('deleteRoomButton');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', deleteRoom);
+        }
+
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('overlay');
+
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        });
+
+        overlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+        });
+    }
+
+
+    // === WebSocket 관련 함수 ===
+
+    function connectToWebSocket() {
+        const socket = new SockJS('/ws-stomp');
+        stompClient = Stomp.over(socket);
+        stompClient.debug = null; // 콘솔에 Stomp 디버그 메시지 끄기
+
+        stompClient.connect({}, (frame) => {
+            console.log('서버에 연결되었습니다: ' + frame);
+            
+            stompClient.subscribe('/topic/room/' + roomId, (message) => {
+                const update = JSON.parse(message.body);
+                handleWebSocketMessage(update);
+            });
+        });
+    }
+
+    function handleWebSocketMessage(update) {
+        if (update.type === 'CODE_UPDATE' && update.senderId !== loginId) {
+            const cursorPos = codeMirrorEditor.getCursor(); // 내 커서 위치 저장
+            codeMirrorEditor.setValue(update.editorContent);
+            codeMirrorEditor.setCursor(cursorPos); // 내 커서 위치 복원
+        } else if (update.type === 'USER_JOIN' || update.type === 'USER_LEAVE') {
+            console.log(update.senderId + '님이 방 상태를 변경했습니다. 참여자 목록을 새로고침합니다.');
+            loadParticipants(); // 참여자 목록 새로고침
+        } else if (update.type === 'ROOM_DELETED') {
+            stompClient.disconnect(() => {
+                alert('방장이 방을 삭제했습니다. 메인 페이지로 이동합니다.');
+                window.location.href = '/';
+            });
+        }
+    }
+
+    function sendCodeUpdate() {
+        if (stompClient && codeMirrorEditor) {
+            const updateMessage = {
+                type: 'CODE_UPDATE',
+                editorContent: codeMirrorEditor.getValue(),
+                senderId: loginId
+            };
+            stompClient.send("/app/code/update/" + roomId, {}, JSON.stringify(updateMessage));
+        }
+    }
+
+
+    // === API 호출 및 UI 로직 함수 ===
+
+    async function leaveRoom() {
+        if (!confirm('정말로 방을 나가시겠습니까?')) return;
+        
+        try {
+            const response = await fetch(`/api/live-rooms/${roomId}/leave`, {
+                method: 'POST'
+            });
+            if (response.ok) {
+                alert('방을 나갔습니다.');
+                window.location.href = '/';
+            } else {
+                throw new Error('방을 나가지 못했습니다.');
+            }
+        } catch (error) {
+            console.error('Leave Room Error:', error);
+            alert('오류가 발생하여 방을 나가지 못했습니다.');
+        }
+    }
+
+    async function inviteMember() {
+        const inviteeIdInput = document.getElementById('inviteMemberId');
+        const inviteeId = inviteeIdInput.value.trim();
+        
+        if (!inviteeId) {
+            alert('초대할 멤버의 ID를 입력해주세요.');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/live-rooms/${roomId}/invite`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ inviteeId: inviteeId }),
+            });
+            
+            if (response.ok) {
+                alert(`${inviteeId}님을 방으로 초대했습니다.`);
+                inviteeIdInput.value = '';
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.message || '초대에 실패했습니다.');
+            }
+        } catch (error) {
+            console.error('Invite Error:', error);
+            alert(error.message);
+        }
+    }
+
+    async function deleteRoom() {
+        if (!confirm('방을 정말로 삭제하시겠습니까? 모든 내용이 사라집니다.')) return;
+        
+        try {
+            const response = await fetch(`/api/live-rooms/${roomId}`, {
+                method: 'DELETE',
+            });
+            
+            if (response.ok) {
+            	// 성공 시에는 별도 alert 없이 ROOM_DELETED 메시지를 통해 리다이렉트 됩니다.
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.message || '방 삭제에 실패했습니다.');
+            }
+        } catch (error) {
+            console.error('Delete Room Error:', error);
+            alert(error.message);
+        }
+    }
+
+    async function loadParticipants() {
+        const listElement = document.getElementById('participantList');
+        try {
+            const response = await fetch(`/api/live-rooms/${roomId}/members`);
+            if (!response.ok) throw new Error('참여자 목록 로드 실패');
+
+            const participants = await response.json();
+            
+            if (participants && participants.length > 0) {
+                 listElement.innerHTML = participants.map(p => {
+                     const isCreator = p.memberId === creatorId;
+                     const creatorBadge = isCreator ? ' <span style="color: #f8c555; font-size: 0.8em;">(방장👑)</span>' : '';
+                     return `<li class="participant-item">${p.nickname} (${p.memberId})${creatorBadge}</li>`;
+                 }).join('');
+            } else {
+                 listElement.innerHTML = '<li>참여자가 없습니다.</li>';
+            }
+        } catch (error) {
+            console.error('Load Participants Error:', error);
+            listElement.innerHTML = '<li>목록을 불러올 수 없습니다.</li>';
+        }
+    }
+    
+    /*]]>*/
+    </script>
+</body>
+</html>

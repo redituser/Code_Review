@@ -1,0 +1,65 @@
+package com.assignment.comment.service;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.assignment.comment.dao.CommentRepository;
+import com.assignment.comment.vo.CommentVO;
+
+@Service
+public class CommentService {
+	@Autowired
+	private CommentRepository commentRepository;
+	
+	
+	public List<CommentVO> getComments(int boardNo){
+		return commentRepository.findByBoardNoOrderByCreateDateAsc(boardNo);
+	}
+	
+	public CommentVO addComment(CommentVO comment) {
+		return commentRepository.save(comment);
+	}
+	
+	 public List<CommentVO> getCommentsByBoardNo(Integer boardNo) {
+	        // 1. DB에서 해당 게시글의 모든 댓글을 정렬된 상태로 가져옵니다.
+	        List<CommentVO> flatList = commentRepository.findByBoardNoOrderByParentCommentNoAscCreateDateAsc(boardNo);
+	        
+	        // 2. 계층 구조로 변환합니다.
+	        List<CommentVO> hierarchicalList = new ArrayList<>();
+	        Map<Integer, CommentVO> commentMap = new HashMap<>();
+	        
+	        for (CommentVO comment : flatList) {
+	            // 자신의 commentNo를 key로 하여 map에 저장합니다.
+	            commentMap.put(comment.getCommentNo(), comment);
+	            
+	            if (comment.getParentCommentNo() != null) {
+	                // 부모 댓글이 있는 경우 (대댓글)
+	                CommentVO parent = commentMap.get(comment.getParentCommentNo());
+	                if (parent != null) {
+	                    // 부모의 children 리스트에 자신을 추가합니다.
+	                    parent.getChildren().add(comment);
+	                }
+	            } else {
+	                // 최상위 댓글인 경우
+	                hierarchicalList.add(comment);
+	            }
+	        }
+	        return hierarchicalList;
+	    }
+	 
+	 
+	  @Transactional
+	    public CommentVO addComment(CommentVO comment) {
+	        // (선택사항) 대댓글의 경우 depth 설정
+	        if (comment.getParentCommentNo() != null) {
+	            CommentVO parent = commentRepository.findById(comment.getParentCommentNo()).orElse(null);
+	            if (parent != null) {
+	                comment.setDepth(parent.getDepth() + 1);
+	            }
+	        }
+	        return commentRepository.save(comment);
+	    }
+	 
+}

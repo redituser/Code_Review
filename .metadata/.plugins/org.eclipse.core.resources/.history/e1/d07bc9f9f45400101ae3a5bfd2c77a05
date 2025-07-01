@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css">
+    <title>{{question.boardTitle}} - CODE CIRCLE</title>
+    <style>
+        /* --- 기본 스타일 --- */
+        body { background-color: #0d1117; color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 24px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .btn { border: 1px solid #30363d; padding: 5px 12px; border-radius: 6px; cursor: pointer; background-color: #21262d; color: #e6edf3; font-weight: 500; text-decoration: none; }
+        .btn:hover { background-color: #30363d; }
+        .btn-primary { background-color: #238636; border-color: #238636; color: white; }
+        .btn-primary:hover { background-color: #2ea043; }
+        .btn-sm { padding: 3px 10px; font-size: 12px; }
+
+        /* --- Q&A 레이아웃 스타일 --- */
+        .question-container { border: 1px solid #30363d; border-radius: 6px; background-color: #161b22; padding: 24px; margin-bottom: 24px; }
+        .question-title { font-size: 28px; margin-bottom: 8px; font-weight: 600; }
+        .post-meta { font-size: 12px; color: #7d8590; margin-bottom: 20px; }
+        .post-content { line-height: 1.7; word-wrap: break-word; }
+        .post-content pre { background-color: #0d1117; padding: 16px; border-radius: 6px; white-space: pre-wrap; }
+        .answers-container { margin-top: 32px; }
+        .answers-count { padding-bottom: 12px; border-bottom: 1px solid #21262d; margin-bottom: 16px; font-weight: 600; font-size: 18px; }
+        .answer-item { border: 1px solid #30363d; border-radius: 6px; margin-bottom: 16px; background: #0d1117; position: relative; transition: border-color 0.3s; }
+        .answer-header { display: flex; justify-content: space-between; align-items: center; background-color: #161b22; padding: 8px 16px; border-bottom: 1px solid #30363d; font-size: 12px; color: #7d8590; }
+        .answer-author { font-weight: bold; color: #e6edf3; }
+        .answer-actions { display: flex; align-items: center; gap: 8px; }
+        .answer-item .post-content { padding: 16px; }
+        .btn-accept { background-color: transparent; border-color: #238636; color: #2ea043; }
+        .btn-accept:hover { background-color: #238636; color: white; }
+        .new-answer-form { margin-top: 32px; padding-top: 24px; border-top: 1px solid #21262d; }
+        .new-answer-form h4 { margin: 0 0 12px 0; }
+        .form-control { width: 100%; padding: 8px 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #e6edf3; font-size: 14px; box-sizing: border-box; }
+        .form-actions { margin-top: 10px; text-align: right; }
+        
+        /* ★문제 1 해결: 채택된 답변 및 댓글 CSS 개선★ */
+        .answer-item.is-accepted { border-color: #238636; box-shadow: 0 0 10px rgba(35, 134, 54, 0.5); }
+        .accepted-badge { padding: 8px 16px; background-color: rgba(35, 134, 54, 0.15); color: #2ea043; font-weight: bold; font-size: 12px; border-bottom: 1px solid #238636; display: flex; align-items: center; gap: 6px; }
+        .accepted-badge svg { width: 16px; height: 16px; fill: currentColor; }
+        
+		 .answer-comment-section {
+		    background-color: #0d1117;
+		    padding: 0;
+		    border-top: 1px solid #30363d;
+		}
+		.answer-comment-section details {
+		    font-size: 12px;
+		}
+		.answer-comment-section summary {
+		    padding: 8px 16px;
+		    color: #7d8590;
+		    cursor: pointer;
+		    list-style: none;
+		    display: flex;
+		    align-items: center;
+		    gap: 6px;
+		}
+		.answer-comment-section summary:hover {
+		    color: #1f6feb;
+		}
+		.answer-comment-section summary::-webkit-details-marker {
+		    display: none;
+		}
+		.comment-thread-container {
+		    padding: 16px 0 0 0; /* 위쪽 패딩만 유지 */
+		    background-color: #161b22;
+		    border-top: 1px solid #30363d;
+		}
+		
+		.comment-wrapper {
+		    display: flex;
+		    flex-direction: column;
+		}
+		
+		.comment-main {
+		    display: flex;
+		    position: relative; /* 연결선의 기준 */
+		}
+		
+		/* 댓글 연결선 스타일 */
+		.comment-connector-line {
+		    width: 32px; /* 들여쓰기 및 선이 그려질 공간 */
+		    flex-shrink: 0;
+		    position: relative;
+		}
+		.comment-reply-item .comment-connector-line::before {
+		    content: '';
+		    position: absolute;
+		    top: 0;
+		    left: 15px; /* 선의 가로 위치 */
+		    height: 100%;
+		    width: 2px;
+		    background-color: #30363d;
+		}
+		.comment-reply-item .comment-connector-line::after {
+		    content: '';
+		    position: absolute;
+		    top: 20px; /* T자 가로선의 세로 위치 */
+		    left: 16px;
+		    width: 12px; /* T자 가로선의 길이 */
+		    height: 2px;
+		    background-color: #30363d;
+		}
+		
+		/* 댓글 실제 내용 영역 */
+		.comment-content-area {
+		    flex-grow: 1;
+		    margin-bottom: 16px;
+		}
+		.comment-author { font-weight: bold; font-size: 13px; margin-bottom: 6px; }
+		.comment-body { font-size: 14px; line-height: 1.6; margin-bottom: 6px; }
+		.comment-actions { font-size: 12px; display: flex; gap: 12px; }
+		.comment-actions a { color: #7d8590; text-decoration: none; font-weight: 500; }
+		.comment-actions a:hover { color: #1f6feb; }
+		.reply-form-container { margin-top: 8px; }
+		
+		/* 대댓글들을 감싸는 컨테이너 */
+		.comment-children-container {
+		    position: relative;
+		}
+		
+		/* --- 댓글 입력 폼 --- */
+		.comment-form {
+		    margin-top: 8px;
+		    background-color: #0d1117;
+		    padding: 12px;
+		    border: 1px solid #30363d;
+		    border-radius: 6px;
+		}
+		.comment-form textarea {
+		    width: 100%;
+		    box-sizing: border-box;
+		    background-color: transparent;
+		    border: none;
+		    color: #e6edf3;
+		    min-height: 60px;
+		    font-size: 14px;
+		    resize: vertical;
+		}
+		.comment-form textarea:focus {
+		    outline: none;
+		}
+		.comment-form button {
+		    padding: 5px 12px;
+		    font-size: 12px;
+		    margin-top: 8px;
+		    float: right;
+		}
+        
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+    <div class="question-container">
+        <h1 class="question-title">{{question.boardTitle}}</h1>
+        <div class="post-meta">
+            작성자: {{question.writerId}} | 작성일: {{question.createDate}}
+            {{#question.groupNo}} | 그룹: {{question.groupNo}} {{/question.groupNo}}
+        </div>
+        
+        <div class="post-actions" style="margin-bottom: 24px; padding-top: 16px; border-top: 1px solid #21262d;">
+            <button id="likeBtn" class="btn">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="vertical-align: middle; margin-right: 4px;">
+                    <path d="M7.656 14.753c.22.232.578.232.798 0l5.66-5.842c2.13-2.2 2.13-5.773 0-7.973s-5.52-2.2-7.65 0l-.504.518-.504-.518c-2.13-2.2-5.52-2.2-7.65 0s-2.13 5.773 0 7.973l5.66 5.842Z"></path>
+                </svg>
+                <span id="likeText">좋아요</span>
+                <span id="likeCount" style="margin-left: 6px; font-size: 13px;"></span>
+            </button>
+        </div>
+        <div class="post-content">
+            {{{question.boardContent}}}
+        </div>
+    </div>
+    	{{#isQuestionOwner}}
+		<div class="post-actions" style="margin-top: 1rem; margin-bottom: 1rem; display: flex; gap: 0.5rem;">
+		    <a href="/board/edit/{{question.boardNo}}" class="btn">수정</a>
+		    
+		    <a href="/board/delete/{{question.boardNo}}" class="btn btn--danger" 
+		       onclick="return confirm('정말로 이 글을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.');">삭제</a>
+		</div>
+		{{/isQuestionOwner}}
+    	
+    	
+
+        <div class="answers-container">
+            <h3 class="answers-count">{{answers.size}}개의 답변</h3>
+
+            {{#answers}}
+            <div class="answer-item {{#isAccepted}}is-accepted{{/isAccepted}}">
+                {{#isAccepted}}
+                <div class="accepted-badge">
+                    <svg viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path></svg>
+                    채택된 답변
+                </div>
+                {{/isAccepted}}
+                <div class="answer-header">
+                    <span class="answer-author">{{writerId}}</span> 님이 답변함
+                    <div class="answer-actions">
+                        {{#isQuestionOwner}}
+                            {{^isAccepted}}
+                            <button class="btn btn-sm btn-accept" onclick="acceptAnswer({{question.boardNo}}, {{boardNo}})">
+                                답변으로 채택
+                            </button>
+                            {{/isAccepted}}
+                        {{/isQuestionOwner}}
+                    </div>
+                </div>
+                <div class="post-content">
+                    {{{boardContent}}}
+                </div>
+
+                <div class="answer-comment-section">
+                    <details ontoggle="loadCommentsOnToggle(this, {{boardNo}})">
+                        <summary class="comment-toggle">댓글 보기</summary>
+                        <div class="comment-thread-container" id="comment-thread-for-{{boardNo}}"></div>
+                    </details>
+                </div>
+            </div>
+            {{/answers}}
+            {{^answers}}
+            <p style="text-align: center; color: #7d8590; padding: 20px 0;">아직 등록된 답변이 없습니다.</p>
+            {{/answers}}
+        </div>
+
+        <div class="new-answer-form">
+            <h4>내 답변 등록하기</h4>
+            <form action="/board/{{question.boardNo}}/answer" method="post">
+                <textarea name="boardContent" class="form-control" rows="6" placeholder="자세한 답변을 작성해주세요. 코드 블록을 사용할 수 있습니다."></textarea>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">답변 등록</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+  <script>
+    // 1. 전역 변수 선언
+    const currentLoginId = '{{loginId}}';
+	const currentBoardNo = {{question.boardNo}}; // 현재 게시글 번호를 템플릿에서 받아옴
+	const likeBtn = document.getElementById('likeBtn');
+	const likeText = document.getElementById('likeText');
+	const likeCountSpan = document.getElementById('likeCount');
+	
+	
+	async function loadLikeStatus() {
+	    // 로그인하지 않은 사용자는 '좋아요' 버튼을 비활성화할 수 있습니다.
+	    if (!currentLoginId) {
+	        likeBtn.disabled = true;
+	        likeText.textContent = '로그인 후 좋아요 가능';
+	    }
+
+	    try {
+	        // 서버 API를 호출하여 현재 '좋아요' 상태와 개수를 가져옵니다.
+	        const response = await fetch(`/api/boards/${currentBoardNo}/like/status`);
+	        if (!response.ok) throw new Error('상태 로드 실패');
+	        
+	        const status = await response.json();
+	        updateLikeButton(status.liked, status.likeCount);
+	    } catch (error) {
+	        console.error("좋아요 상태 로드 실패:", error);
+	    }
+	}
+	
+	async function handleLikeClick() {
+	    if (!currentLoginId) {
+	        alert('로그인이 필요합니다.');
+	        return;
+	    }
+	    
+	    try {
+	        // 서버에 '좋아요' 토글 요청을 보냅니다.
+	        const response = await fetch(`/api/boards/${currentBoardNo}/like`, { method: 'POST' });
+	        if (!response.ok) {
+	            // 401 Unauthorized 에러 등 처리
+	            const errorText = await response.text();
+	            throw new Error(errorText);
+	        }
+	        
+	        const result = await response.json();
+	        // 서버로부터 받은 최신 상태로 버튼 UI를 업데이트합니다.
+	        updateLikeButton(result.liked, result.likeCount);
+
+	    } catch (error) {
+	        console.error('좋아요 처리 실패:', error);
+	        alert(error.message);
+	    }
+	}
+
+	
+	
+	function updateLikeButton(isLiked, count) {
+	    likeCountSpan.textContent = count;
+	    if (isLiked) {
+	        likeBtn.style.borderColor = '#f85149';
+	        likeBtn.style.color = '#f85149';
+	        likeText.textContent = '좋아요 취소';
+	    } else {
+	        likeBtn.style.borderColor = '#30363d';
+	        likeBtn.style.color = '#e6edf3';
+	        likeText.textContent = '좋아요';
+	    }
+	}
+
+	
+
+    // 2. 모든 헬퍼 함수들을 전역 스코프에 선언
+
+    async function acceptAnswer(questionNo, answerNo) {
+        if (!confirm('이 답변을 최종 답변으로 채택하시겠습니까?')) return;
+        try {
+            const response = await fetch(`/board/${questionNo}/accept/${answerNo}`, { method: 'POST' });
+            if (!response.ok) throw new Error('서버 응답 오류');
+            const result = await response.json();
+            if (result.success) {
+                alert(result.message);
+                location.reload();
+            } else {
+                alert('오류: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('답변 채택 중 오류가 발생했습니다.');
+        }
+    }
+
+    async function refreshComments(boardNo) {
+        const container = document.getElementById(`comment-thread-for-${boardNo}`);
+        container.innerHTML = '<p>댓글을 불러오는 중...</p>';
+        try {
+            const response = await fetch(`/api/board/${boardNo}/comments`);
+            if (!response.ok) throw new Error('댓글 로드 실패');
+            const comments = await response.json();
+            renderComments(container, comments, boardNo);
+        } catch (error) {
+            container.innerHTML = '<p>댓글을 불러오는 데 실패했습니다.</p>';
+            console.error(error);
+        }
+    }
+
+    async function loadCommentsOnToggle(detailsElement, boardNo) {
+        if (!detailsElement.open) return;
+        const container = detailsElement.querySelector('.comment-thread-container');
+        if (container.innerHTML.trim() === '') {
+            await refreshComments(boardNo);
+        }
+    }
+
+    function renderComments(container, comments, boardNo) {
+        container.innerHTML = '';
+        if (comments.length === 0) {
+            container.innerHTML = '<p style="font-size: 12px; color: #7d8590;">등록된 댓글이 없습니다.</p>';
+        } else {
+            comments.forEach(comment => {
+                container.appendChild(createCommentElement(comment, boardNo));
+            });
+        }
+        container.appendChild(createCommentForm(boardNo, null));
+    }
+    
+    // ★★★ [수정] 중복 제거 및 수정/삭제 로직이 포함된 유일한 함수 ★★★
+   function createCommentElement(comment, boardNo) {
+    const div = document.createElement('div');
+    // 모든 댓글/대댓글 요소에 공통 클래스를 부여하고, 깊이에 따라 다른 클래스도 부여합니다.
+    div.className = 'comment-wrapper ' + (comment.depth === 0 ? 'comment-item' : 'comment-reply-item');
+
+    // 재귀적으로 자식 댓글(대댓글)들의 HTML을 생성합니다.
+    let childrenHtml = '';
+    if (comment.children && comment.children.length > 0) {
+        comment.children.forEach(child => {
+            childrenHtml += createCommentElement(child, boardNo).outerHTML;
+        });
+    }
+
+    // 현재 로그인 사용자가 댓글 작성자일 경우에만 수정/삭제 버튼을 추가합니다.
+    const ownerButtons = currentLoginId === comment.writerId ? `
+        <a href="javascript:void(0)" onclick="showEditForm(this, ${comment.commentNo}, \`${comment.commentContent}\`)">수정</a>
+        <a href="javascript:void(0)" onclick="deleteComment(${boardNo}, ${comment.commentNo})">삭제</a>
+    ` : '';
+
+    // 새로운 HTML 구조를 적용합니다.
+    div.innerHTML = `
+        <div class="comment-main">
+            <div class="comment-connector-line"></div>
+            <div class="comment-content-area">
+                <div class="comment-author">${comment.writerId}</div>
+                <div class="comment-body">${comment.commentContent.replace(/\n/g, '<br>')}</div>
+                <div class="comment-actions">
+                    <a href="javascript:void(0)" onclick="toggleReplyForm(this, ${boardNo}, ${comment.commentNo})">답변</a>
+                    ${ownerButtons}
+                </div>
+                <div class="reply-form-container"></div>
+            </div>
+        </div>
+        ${childrenHtml ? `<div class="comment-children-container">${childrenHtml}</div>` : ''}
+    `;
+    return div;
+}
+    function createCommentForm(boardNo, parentCommentNo) {
+        const formContainer = document.createElement('div');
+        formContainer.className = 'comment-form';
+        const textarea = document.createElement('textarea');
+        textarea.placeholder = parentCommentNo ? '대댓글을 입력하세요...' : '댓글을 입력하세요...';
+        const button = document.createElement('button');
+        button.className = 'btn btn-sm btn-primary';
+        button.textContent = '등록';
+
+        button.onclick = async () => {
+            const content = textarea.value.trim();
+            if (!content) {
+                alert('댓글 내용을 입력해주세요.');
+                return;
+            }
+            button.disabled = true;
+            await postComment(boardNo, content, parentCommentNo);
+            await refreshComments(boardNo);
+        };
+
+        formContainer.appendChild(textarea);
+        formContainer.appendChild(button);
+        return formContainer;
+    }
+
+    function toggleReplyForm(element, boardNo, parentCommentNo) {
+        const container = element.closest('.comment-wrapper').querySelector('.reply-form-container');
+        if (container.hasChildNodes()) {
+            container.innerHTML = '';
+        } else {
+            container.appendChild(createCommentForm(boardNo, parentCommentNo));
+            container.querySelector('textarea').focus();
+        }
+    }
+
+    async function postComment(boardNo, content, parentCommentNo) {
+        try {
+            const response = await fetch(`/api/board/${boardNo}/comments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    commentContent: content,
+                    parentCommentNo: parentCommentNo
+                })
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error('댓글 등록 실패: ' + errorText);
+            }
+        } catch (error) {
+            alert(error.message);
+            console.error(error);
+        }
+    }
+    
+    // ★★★ [수정] 수정/삭제 관련 함수들을 전역 스코프로 이동 ★★★
+
+    async function deleteComment(boardNo, commentNo) {
+        if (!confirm('정말로 삭제하시겠습니까?')) return;
+        try {
+            const response = await fetch(`/api/comments/${commentNo}`, { method: 'DELETE' });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error('삭제 실패: ' + errorText);
+            }
+            await refreshComments(boardNo);
+        } catch (error) {
+            alert(error.message);
+            console.error(error);
+        }
+    }
+
+    function showEditForm(element, commentNo, currentContent) {
+        const mainContentDiv = element.closest('.comment-main-content');
+        const contentDiv = mainContentDiv.querySelector('.comment-content');
+        const actionsDiv = mainContentDiv.querySelector('.comment-actions');
+
+        const editForm = document.createElement('div');
+        editForm.className = 'comment-form';
+        editForm.innerHTML = `
+            <textarea class="form-control" style="min-height: 80px;">${currentContent}</textarea>
+            <div class="form-actions">
+                <button class="btn btn-sm" onclick="hideEditForm(this)">취소</button>
+                <button class="btn btn-sm btn-primary" onclick="updateComment(this, ${commentNo})">저장</button>
+            </div>
+        `;
+        
+        contentDiv.style.display = 'none';
+        actionsDiv.style.display = 'none';
+        mainContentDiv.insertBefore(editForm, actionsDiv);
+        editForm.querySelector('textarea').focus();
+    }
+
+    function hideEditForm(element) {
+        const mainContentDiv = element.closest('.comment-main-content');
+        mainContentDiv.querySelector('.comment-content').style.display = 'block';
+        mainContentDiv.querySelector('.comment-actions').style.display = 'block';
+        mainContentDiv.querySelector('.comment-form').remove();
+    }
+
+    async function updateComment(element, commentNo) {
+        const mainContentDiv = element.closest('.comment-main-content');
+        const textarea = mainContentDiv.querySelector('textarea');
+        const newContent = textarea.value.trim();
+
+        if (!newContent) {
+            alert('수정할 내용을 입력해주세요.');
+            return;
+        }
+
+        const boardNo = element.closest('.answer-item').querySelector('details').dataset.boardNo; // boardNo 찾기
+
+        try {
+            const response = await fetch(`/api/comments/${commentNo}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ commentContent: newContent })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error('수정 실패: ' + errorText);
+            }
+            
+            // 수정 성공 후, 댓글 목록 전체를 새로고침하여 변경사항을 반영
+            await refreshComments(boardNo);
+
+        } catch (error) {
+            alert(error.message);
+            console.error(error);
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        // 1. 좋아요 버튼의 초기 상태를 설정합니다.
+        loadLikeStatus();
+        
+        // 2. 좋아요 버튼에 클릭 이벤트를 연결합니다.
+        likeBtn.addEventListener('click', handleLikeClick);
+        
+        // 3. 만약 다른 페이지 로딩 시 실행해야 할 기능이 있다면 여기에 추가합니다.
+    });
+
+    
+</script>
+</body>
+</html>

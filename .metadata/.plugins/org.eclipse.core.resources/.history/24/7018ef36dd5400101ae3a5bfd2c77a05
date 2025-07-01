@@ -1,0 +1,62 @@
+package com.assignment.board.Controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.assignment.board.service.BoardService;
+import com.assignment.like.service.LikeService;
+
+public class DashboardController {
+	@Autowired
+	private BoardService boardService;
+
+	@Autowired
+	private LikeService likeService;
+	
+
+    @GetMapping("/") // 메인 페이지를 담당하는 메서드
+    public String mainDashboard(Model model, HttpSession session) {
+        String loginId = (String) session.getAttribute("loginId");
+        
+        // ... (isLogin, isAdmin 등 기존 로직) ...
+        
+        if (loginId != null) {
+            // [수정] 내가 작성한 게시글
+            List<BoardVO> myPostsVO = boardService.getPostsByWriter(loginId);
+            List<BoardSummaryDto> myPosts = convertToDto(myPostsVO);
+            model.addAttribute("myPosts", myPosts);
+            
+            // [수정] 최신 게시글
+            List<BoardVO> recentPostsVO = boardService.getRecentPosts();
+            List<BoardSummaryDto> recentPosts = convertToDto(recentPostsVO);
+            model.addAttribute("recentPosts", recentPosts);
+
+            // [수정] 인기 게시글
+            // getPopularBoardPage는 Page<BoardVO>를 반환하므로, content만 가져와서 변환
+            List<BoardVO> popularPostsVO = boardService.getPopularBoardPage(PageRequest.of(0, 5)).getContent();
+            List<BoardSummaryDto> popularPosts = convertToDto(popularPostsVO);
+            model.addAttribute("popularPosts", popularPosts);
+
+            // [수정] 좋아요한 게시글
+            List<BoardVO> likedPostsVO = likeService.getLikedPostsByUser(loginId);
+            List<BoardSummaryDto> likedPosts = convertToDto(likedPostsVO);
+            model.addAttribute("likedPosts", likedPosts);
+        }
+
+        return "main/dashboard"; // dashboard.html 템플릿
+    }
+
+    /**
+     * [추가] BoardVO 리스트를 BoardSummaryDto 리스트로 변환하는 헬퍼 메서드
+     */
+    private List<BoardSummaryDto> convertToDto(List<BoardVO> boards) {
+        return boards.stream()
+                .map(board -> {
+                    // 각 게시글의 좋아요 수를 조회
+                    long likeCount = likeService.getLikeCount(board.getBoardNo());
+                    // DTO로 변환
+                    return new BoardSummaryDto(board, likeCount);
+                })
+                .collect(Collectors.toList());
+    }
+	
+}

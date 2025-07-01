@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>CODE CIRCLE - 회원가입</title>
+<style>
+    :root { --color-canvas-default: #0d1117; --color-neutral-subtle: #161b22; --color-border-default: #30363d; --color-fg-default: #e6edf3; --color-accent-fg: #1f6feb; --color-accent-emphasis: #238636; --color-fg-on-emphasis: #ffffff; }
+    body { font-family: sans-serif; background-color: var(--color-canvas-default); color: var(--color-fg-default); display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .container { width: 100%; max-width: 420px; background-color: var(--color-neutral-subtle); border: 1px solid var(--color-border-default); border-radius: 6px; padding: 24px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group__label { display: block; margin-bottom: 6px; font-size: 14px; }
+    .form-group__input { width: 100%; box-sizing: border-box; padding: 8px 12px; background: var(--color-canvas-default); border: 1px solid var(--color-border-default); border-radius: 6px; color: var(--color-fg-default); font-size: 14px; }
+    .btn { display: block; width: 100%; border: 1px solid var(--color-border-default); padding: 10px 12px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; text-align: center; background-color: var(--color-accent-emphasis); color: var(--color-fg-on-emphasis); }
+    #face-registration-area { margin-top: 20px; border-top: 1px solid #30363d; padding-top: 20px; }
+    #webcam-container { position: relative; width: 100%; padding-top: 75%; /* 4:3 Aspect Ratio */ background: #000; margin: 10px auto; border-radius: 6px; overflow: hidden; }
+    #webcam { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+    #status-text { text-align: center; color: #7d8590; height: 20px; margin-top: 8px; font-size: 12px; }
+    #capture-btn { margin-top: 10px; background-color: #21262d; border-color: #30363d; }
+    #capture-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+</style>
+</head>
+<body>
+    <div class="container">
+        <h2 style="text-align: center; margin-bottom: 20px;">회원가입</h2>
+        <form id="signupForm">
+            <div class="form-group">
+                <label for="id" class="form-group__label">아이디</label>
+                <input id="id" name="id" type="text" required class="form-group__input">
+            </div>
+            <div class="form-group">
+                <label for="password" class="form-group__label">비밀번호</label>
+                <input id="password" name="password" type="password" required class="form-group__input">
+            </div>
+            <div class="form-group">
+                <label for="email" class="form-group__label">이메일</label>
+                <input id="email" name="email" type="email" required class="form-group__input">
+            </div>
+            <div class="form-group">
+                <label for="nickName" class="form-group__label">닉네임</label>
+                <input id="nickName" name="nickName" type="text" required class="form-group__input">
+            </div>
+
+            <div id="face-registration-area">
+                <h3 style="font-size: 16px;">얼굴 등록 (선택)</h3>
+                <div id="webcam-container">
+                    <video id="webcam" autoplay playsinline></video>
+                </div>
+                <button type="button" id="capture-btn" class="btn" disabled>얼굴 촬영</button>
+                <input type="hidden" id="face-image-data">
+            </div>
+             <div id="status-text">카메라 준비 중...</div>
+
+            <button type="submit" class="btn" style="margin-top: 20px;">가입하기</button>
+        </form>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const video = document.getElementById('webcam');
+    const captureBtn = document.getElementById('capture-btn');
+    const statusText = document.getElementById('status-text');
+    const faceImageDataInput = document.getElementById('face-image-data');
+    let stream;
+
+    async function startWebcam() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            video.srcObject = stream;
+            statusText.textContent = '카메라가 준비되었습니다.';
+            captureBtn.disabled = false;
+        } catch (err) {
+            statusText.textContent = '카메라를 사용할 수 없습니다.';
+        }
+    }
+
+    captureBtn.addEventListener('click', () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        faceImageDataInput.value = canvas.toDataURL('image/jpeg');
+        statusText.textContent = '✅ 얼굴이 촬영되었습니다!';
+        captureBtn.textContent = '다시 촬영';
+    });
+
+    document.getElementById('signupForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
+        
+        // MemberVO와 매핑될 JSON 객체 생성
+        const data = {
+            id: this.id.value,
+            password: this.password.value,
+            email: this.email.value,
+            nickName: this.nickName.value,
+            faceEmbedding: faceImageDataInput.value // 임시로 임베딩 필드에 Base64 데이터 전달
+        };
+
+        statusText.textContent = "가입 처리 중... 잠시만 기다려주세요.";
+        captureBtn.disabled = true;
+        
+        try {
+            const response = await fetch('/user/signup-with-face', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                alert('회원가입이 완료되었습니다! 로그인 페이지로 이동합니다.');
+                window.location.href = '/user/login';
+            } else {
+                alert('회원가입 실패: ' + result.message);
+                statusText.textContent = "가입에 실패했습니다.";
+            }
+        } catch (error) {
+            alert('서버와 통신 중 오류가 발생했습니다.');
+            statusText.textContent = "오류 발생.";
+        } finally {
+            captureBtn.disabled = false;
+        }
+    });
+    
+    startWebcam();
+});
+</script>
+</body>
+</html>

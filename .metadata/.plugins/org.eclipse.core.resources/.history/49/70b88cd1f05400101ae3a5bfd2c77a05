@@ -1,0 +1,316 @@
+package com.assignment.board.Controller;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping; // RequestMapping 임포트
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.assignment.board.service.BoardService;
+import com.assignment.board.vo.BoardSummaryDto;
+import com.assignment.board.vo.BoardVO;
+import com.assignment.like.service.LikeService;
+
+import jakarta.servlet.http.HttpSession;
+
+@Controller
+@RequestMapping("/board") // [개선] 이 컨트롤러의 모든 URL 앞에 "/board"를 공통으로 붙입니다.
+public class BoardController {
+
+	@Autowired
+	private BoardService boardService;
+
+	@Autowired
+	private LikeService likeService;
+
+	// [삭제] 중복되고 오래된 /board/boardList 매핑 메서드 삭제
+
+	/**
+	 * 게시글 상세 페이지
+	 */
+	@GetMapping("/detail/{boardNo}")
+	public String boardDetail(@PathVariable("boardNo") int boardNo, Model model, HttpSession session) {
+		String loginId = (String) session.getAttribute("loginId");
+
+		BoardVO question = boardService.selectBoardOne(boardNo);
+		if (question == null) {
+			return "redirect:/board/list"; // [개선] 일관성을 위해 /list로 리다이렉트
+		}
+
+		List<BoardVO> answers = boardService.getAnswersForQuestion(boardNo);
+
+		// [개선] 채택된 답변을 찾으면 즉시 반복을 중단하여 효율성 증대
+		if (question.getAcceptedAnswerNo() != null) {
+			for (BoardVO answer : answers) {
+				if (answer.getBoardNo() == question.getAcceptedAnswerNo()) {
+					answer.setAccepted(true);
+					break; // 찾았으니 더 이상 반복할 필요 없음
+				}
+			}
+		}
+
+		long likeCount = likeService.getLikeCount(boardNo);
+		question.setLikeCount(likeCount);
+
+		model.addAttribute("question", question);
+		model.addAttribute("answers", answers);
+		model.addAttribute("loginId", loginId);
+		model.addAttribute("isQuestionOwner", boardService.isBoardOwner(boardNo, loginId));
+
+		return "board/board-detail";
+	}
+
+	/**
+	 * 새 글 작성 페이지
+	 */
+	@GetMapping("/new") // [개선] boardnew -> new 로 간결하게 변경
+	public String insertPage() {
+		return "board/board-new";
+	}
+
+	/**
+	 * 글 작성 처리
+	 */
+	@PostMapping("/write")
+	public String insert(BoardVO board, HttpSession session) {
+		String loginId = (String) session.getAttribute("loginId");
+		if (loginId == null) {
+			return "redirect:/user/login";
+		}
+		board.setWriterId(loginId);
+		BoardVO vo = boardService.editOrInsertBoard(board);
+		return "redirect:/board/detail/" + vo.getBoardNo();
+	}
+
+
+
+
+	
+	/**
+	 * 전체 게시글 목록 (최신순)
+	 */
+	@GetMapping("/list")
+	public String boardListPage(Model model,
+	        @PageableDefault(size = 10, sort = "createDate", direction = Sort.Direction.DESC) Pageable pageable) {
+
+	    System.out.println("\n\n--- [디버깅 시작] /board/list 요청 ---");
+
+	    // 1단계: DB에서 가져온 원본 데이터(VO) 확인
+	    Page<BoardVO> boardPageVO = boardService.getBoardPage(pageable); // (이전 테스트용 코드는 원래대로 돌려놓으셔도 됩니다)
+	    System.out.println("1. [DB 원본 데이터] boardPageVO가 null인가? " + (boardPageVO == null));
+	    if (boardPageVO != null) {
+	        System.out.println("1. [DB 원본 데이터] 총 게시글 수: " + boardPageVO.getTotalElements());
+	        System.out.println("1. [DB 원본 데이터] 현재 페이지 게시글 수: " + boardPageVO.getContent().size());
+	        if (!boardPageVO.getContent().isEmpty()) {
+	            System.out.println("1. [DB 원본 데이터] 첫번째 게시글 제목: " + boardPageVO.getContent().get(0).getBoardTitle());
+	        }
+	    }
+	    
+	    // 2단계: 화면용 데이터(DTO)로 변환 후 확인
+	    Page<BoardSummaryDto> boardPageDto = convertToDtoPage(boardPageVO, pageable);
+	    System.out.println("\n2. [DTO 변환 데이터] boardPageDto가 null인가? " + (boardPageDto == null));
+	    if (boardPageDto != null) {
+	        System.out.println("2. [DTO 변환 데이터] 총 게시글 수: " + boardPageDto.getTotalElements());
+	        System.out.println("2. [DTO 변환 데이터] 현재 페이지 게시글 수: " + boardPageDto.getContent().size());
+	        if (!boardPageDto.getContent().isEmpty()) {
+	            System.out.println("2. [DTO 변환 데이터] 첫번째 게시글 제목: " + boardPageDto.getContent().get(0).getBoardTitle());
+	        }
+	    }
+
+	    // 3단계: 모델에 데이터 추가
+	    addPaginationAttributes(model, boardPageDto); // model.addAttribute("boardPage", page) 포함
+	    System.out.println("\n3. [모델 추가] 모델에 'boardPage'라는 이름으로 데이터 추가 완료");
+	    System.out.println("--- [디버깅 종료] 이제 board-list.mustache 템플릿을 렌더링합니다. ---");
+	    
+	    model.addAttribute("pageTitle", "전체 게시글");
+	    return "board/board-list";
+	}
+
+	/**
+	 * 인기 게시글 목록
+	 */
+	@GetMapping("/popular")
+	public String popularBoardListPage(Model model, @PageableDefault(size = 10) Pageable pageable) {
+
+		Page<BoardVO> boardPageVO = boardService.getPopularBoardPage(pageable);
+		Page<BoardSummaryDto> boardPageDto = convertToDtoPage(boardPageVO, pageable);
+
+		addPaginationAttributes(model, boardPageDto); // 페이지네이션 데이터 추가
+		model.addAttribute("pageTitle", "인기 게시글");
+		return "board/board-list";
+	}
+
+	/**
+	 * 답변 작성 처리
+	 */
+	@PostMapping("/{questionNo}/answer")
+	public String addAnswer(@PathVariable("questionNo") int questionNo, BoardVO answer, HttpSession session) {
+		String loginId = (String) session.getAttribute("loginId");
+		if (loginId == null) {
+			return "redirect:/user/login";
+		}
+
+		BoardVO question = boardService.selectBoardOne(questionNo);
+		if (question == null) {
+			return "redirect:/board/list";
+		}
+
+		answer.setWriterId(loginId);
+		answer.setParentBoardNo(questionNo);
+		answer.setBoardTitle("Re: " + question.getBoardTitle());
+		answer.setBoardCategory(question.getBoardCategory());
+		boardService.editOrInsertBoard(answer);
+		return "redirect:/board/detail/" + questionNo;
+	}
+
+	/**
+	 * 답변 채택 처리 API
+	 * 
+	 */
+	@PostMapping("/{questionNo}/accept/{answerNo}")
+	@ResponseBody
+	public Map<String, Object> acceptAnswer(@PathVariable("questionNo") int questionNo,
+			@PathVariable("answerNo") int answerNo, HttpSession session) {
+		String loginId = (String) session.getAttribute("loginId");
+		Map<String, Object> response = new HashMap<>();
+
+		if (!boardService.isBoardOwner(questionNo, loginId)) {
+			response.put("success", false);
+			response.put("message", "질문 작성자만 답변을 채택할 수 있습니다.");
+			return response;
+		}
+		try {
+			boardService.acceptAnswer(questionNo, answerNo);
+			response.put("success", true);
+		} catch (Exception e) {
+			response.put("success", false);
+			response.put("message", "처리 중 오류가 발생했습니다: " + e.getMessage());
+		}
+		return response;
+	}
+
+	// --- 헬퍼 메서드 영역 ---
+
+	private Page<BoardSummaryDto> convertToDtoPage(Page<BoardVO> boardPageVO, Pageable pageable) {
+		List<BoardSummaryDto> dtos = boardPageVO.getContent().stream()
+				.map(board -> new BoardSummaryDto(board, likeService.getLikeCount(board.getBoardNo())))
+				.collect(Collectors.toList());
+		return new PageImpl<>(dtos, pageable, boardPageVO.getTotalElements());
+	}
+
+	private void addPaginationAttributes(Model model, Page<?> page) {
+		System.out.println(">>> addPaginationAttributes 메소드 내부 실행됨! <<<");
+
+	    model.addAttribute("boardPage", page);
+	    // 절대로 헷갈릴 수 없는 새로운 이름으로 변경
+	    model.addAttribute("thisIsTheRealPageNumber", page.getNumber() + 1); 
+	    model.addAttribute("previousPageNumber", page.getNumber() - 1);
+	    model.addAttribute("nextPageNumber", page.getNumber() + 1);
+	}
+	
+	
+	
+	/**
+	 * 글 수정 페이지
+	 */
+	@GetMapping("/edit/{boardNo}")
+	public String boardEditForm(@PathVariable("boardNo") int boardNo, Model model, HttpSession session) {
+	    // ▼▼▼ 권한 확인 로직 추가 ▼▼▼
+	    String loginId = (String) session.getAttribute("loginId");
+	    if (!boardService.isBoardOwner(boardNo, loginId)) {
+	        // 본인 글이 아니면 목록으로 리다이렉트 (혹은 에러 페이지)
+	        return "redirect:/board/list"; 
+	    }
+	    // ▲▲▲ 권한 확인 로직 추가 ▲▲▲
+
+	    BoardVO board = boardService.selectBoardOne(boardNo);
+	    model.addAttribute("board", board);
+	    return "board/board-edit";
+	}
+
+	/**
+	 * 글 수정 처리
+	 */
+	@PostMapping("/edit")
+	public String boardEdit(BoardVO vo, HttpSession session) {
+	    // ▼▼▼▼▼▼ 수정 처리 디버깅 코드 ▼▼▼▼▼▼
+	    System.out.println("\n\n--- [디버깅 시작] /board/edit (POST) 요청 ---");
+	    try {
+	        String loginId = (String) session.getAttribute("loginId");
+	        System.out.println("1. 세션에서 가져온 로그인 ID: " + loginId);
+	        
+	        // 폼에서 전송된 BoardVO 데이터 확인
+	        System.out.println("2. 폼에서 바인딩된 BoardVO 데이터 확인:");
+	        System.out.println("   - Board No: " + vo.getBoardNo());
+	        System.out.println("   - Board Title: " + vo.getBoardTitle());
+	        // System.out.println("   - Board Content: " + vo.getBoardContent()); // 내용은 길 수 있으므로 주석 처리
+	        
+	        if (vo.getBoardNo() == null || vo.getBoardNo() == 0) {
+	            System.out.println("[에러] 폼에서 boardNo가 전송되지 않았습니다. board-edit.html 템플릿에 <input type='hidden' name='boardNo' ...> 가 있는지 확인하세요.");
+	            // 여기서 적절한 에러 처리를 할 수 있습니다.
+	        }
+
+	        // 권한 확인 로직
+	        System.out.println("3. 게시글 소유권 확인 시작 (boardNo: " + vo.getBoardNo() + ", loginId: " + loginId + ")");
+	        boolean isOwner = boardService.isBoardOwner(vo.getBoardNo(), loginId);
+	        System.out.println("   - 소유권 확인 결과: " + isOwner);
+	        if (!isOwner) {
+	            System.out.println("[권한 없음] 다른 사용자의 글을 수정할 수 없습니다. 목록으로 리다이렉트합니다.");
+	            return "redirect:/board/list";
+	        }
+
+	        // 서비스 메소드 호출
+	        System.out.println("4. boardService.editOrInsertBoard(vo) 호출 시작");
+	        BoardVO updatedBoard = boardService.editOrInsertBoard(vo);
+	        System.out.println("5. 서비스 호출 완료. 수정된 게시글 번호: " + updatedBoard.getBoardNo());
+	        
+	        System.out.println("--- [디버깅 종료] 수정 성공. 상세 페이지로 리다이렉트합니다. ---");
+	        return "redirect:/board/detail/" + updatedBoard.getBoardNo();
+	        
+	    } catch (Exception e) {
+	        System.err.println("[치명적 에러] /board/edit 처리 중 예외 발생!");
+	        e.printStackTrace(); // 콘솔에 전체 에러 로그 출력
+	        // 여기에 에러 페이지로 리다이렉트하는 로직을 추가할 수 있습니다.
+	        return "redirect:/error-page"; 
+	    }
+	    // ▲▲▲▲▲▲ 여기까지 입니다 ▲▲▲▲▲▲
+	}
+
+	/**
+	 * 글 삭제 처리
+	 */
+	@GetMapping("/delete/{boardNo}")
+	public String boardDelete(@PathVariable("boardNo") int boardNo, HttpSession session) {
+	    // ▼▼▼ 권한 확인 로직 추가 ▼▼▼
+	    String loginId = (String) session.getAttribute("loginId");
+	    if (!boardService.isBoardOwner(boardNo, loginId)) {
+	        return "redirect:/board/list";
+	    }
+	    // ▲▲▲ 권한 확인 로직 추가 ▲▲▲
+
+	    boardService.deleteBoard(boardNo);
+	    return "redirect:/board/list"; // 삭제 후 전체 목록으로 이동
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+}

@@ -1,0 +1,90 @@
+package com.assignment.member.service;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.assignment.member.dao.MemberRepository;
+import com.assignment.member.vo.MemberVO;
+
+@Service
+public class MemberService {
+
+	@Autowired
+	MemberRepository memberRepository;
+
+	public boolean login(String id, String password) {
+
+		Optional<MemberVO> optional = memberRepository.findById(id);
+		if (optional.isPresent()) {
+			MemberVO member = optional.get();
+			return member.getPassword().equals(password);
+		}
+		return false;
+
+	}
+
+	public void modifyMember(MemberVO vo) {
+		memberRepository.save(vo);
+	}
+	
+	@Deprecated // 향후 삭제 예정임을 표시
+	public boolean createAccount(MemberVO vo) {
+		if (memberRepository.existsById(vo.getId())) {// 중복 회원 방지
+			return false;
+		}
+
+		memberRepository.save(vo);
+		return true;
+
+	}
+
+	public void deleteAccount(MemberVO vo) {
+		memberRepository.delete(vo);
+	}
+
+	public List<String> searchMembersByNickName(String query) {
+		// 대소문자 구분 없이 ID나 닉네임에서 검색
+		return memberRepository.findByNickNameContaining(query).stream().map(MemberVO::getId).collect(Collectors.toList());
+	}
+
+	public boolean registerMember(MemberVO vo) {
+		if (memberRepository.existsById(vo.getId())) {
+			return false;
+		}
+		memberRepository.save(vo);
+		return true;
+	}
+
+	public List<MemberVO> findAllWithFaceEmbeddings() {
+		  return memberRepository.findAllByFaceEmbeddingIsNotNull();
+	}
+	
+	  public MemberVO getMemberById(String id) {
+	        return memberRepository.findById(id)
+	            .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + id));
+	    }
+	  @Transactional
+	    public MemberVO updateProfile(String loginId, String newNickname, String newEmail) {
+	        MemberVO member = getMemberById(loginId);
+
+	        // 닉네임 변경 시 중복 체크
+	        if (!member.getNickname().equals(newNickname) && memberRepository.existsByNickname(newNickname)) {
+	            throw new IllegalStateException("이미 사용 중인 닉네임입니다.");
+	        }
+	        // 이메일 변경 시 중복 체크
+	        if (!member.getEmail().equals(newEmail) && memberRepository.existsByEmail(newEmail)) {
+	             throw new IllegalStateException("이미 사용 중인 이메일입니다.");
+	        }
+
+	        member.setNickname(newNickname);
+	        member.setEmail(newEmail);
+
+	        return memberRepository.save(member);
+	    }
+
+}

@@ -1,0 +1,75 @@
+package com.assignment.mainController;
+
+import java.util.Date;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+
+import com.assignment.AssignmentApplication;
+import com.assignment.board.service.BoardService;
+import com.assignment.board.vo.BoardVO;
+import com.assignment.invite.service.InviteService;
+import com.assignment.invite.vo.InviteDTO;
+import com.assignment.like.service.LikeService;
+
+import jakarta.servlet.http.HttpSession;
+
+@Controller
+public class MainController {
+
+	private final AssignmentApplication assignmentApplication;
+
+	MainController(AssignmentApplication assignmentApplication) {
+		this.assignmentApplication = assignmentApplication;
+	}
+
+	@Autowired
+	InviteService inviteService;
+	
+	@Autowired 
+	BoardService boardService;
+	
+	@Autowired
+	LikeService likeService;
+	
+
+	@GetMapping("/")
+	public String mainPage(HttpSession session, Model model) {
+	    String loginId = (String) session.getAttribute("loginId");
+	    if (loginId != null) {
+	        model.addAttribute("loginId", loginId);
+	        model.addAttribute("isLogin", true);
+	        
+	        // 1. 서비스로부터 통합된 초대 '목록'을 받아옵니다.
+	        List<InviteDTO> myInvites = inviteService.getMyUnifiedInvites(loginId);
+	        List<BoardVO> likedPosts = likeService.getLikedBoardsByMember(loginId);
+	        List<BoardVO> recentPosts = boardService.getRecentPosts();
+	        
+	        
+	        // 2. 받아온 목록의 '개수'를 .size()로 구합니다.
+	        int inviteCount = myInvites.size();
+	        
+	        // 3. 모델에 초대 개수를 담습니다.
+	        model.addAttribute("inviteCount", inviteCount);
+	        model.addAttribute("likedPosts", likedPosts);
+	        
+	        List<BoardVO> boardList = boardService.getPostsByWriterId(loginId);
+	        System.out.println("보드리스트 호출 : " + boardList);
+	        model.addAttribute("myPosts" , boardList);
+
+	    } else {
+	        model.addAttribute("isLogin", false);
+	    }
+
+	    return "main/main";
+	}
+	@GetMapping("/user/login")
+	public String loginPage() {
+		System.out.println("로그인 호출");
+		return "user/login";
+	}
+
+}

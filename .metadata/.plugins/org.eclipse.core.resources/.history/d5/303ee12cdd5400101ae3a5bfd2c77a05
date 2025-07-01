@@ -1,0 +1,10 @@
+package com.assignment.board.Controller;
+
+public class DashboardController {
+	 @Autowired
+	    private BoardService boardService;
+
+	    @Autowired
+	    private LikeService likeService;
+
+}

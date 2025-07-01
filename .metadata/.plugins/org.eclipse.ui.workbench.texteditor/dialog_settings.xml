@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<item key="hasShownOverlayPopupBefore" value="true"/>
+	<section name="java.lang.Class">
+		<item key="replaceBarOpen" value="false"/>
+		<list key="findhistory">
+			<item value=" loadAssigneeOptions()"/>
+			<item value="openTaskModal"/>
+			<item value="loadAssigneeOptions()"/>
+			<item value="&lt;div class=&quot;form-group&quot;&gt;&lt;label for=&quot;task-assignee-id&quot;&gt;담당자 ID&lt;/label&gt;&lt;input type=&quot;text&quot; id=&quot;task-assignee-id&quot; placeholder=&quot;그룹 멤버의 ID를 입력하세요&quot;&gt;&lt;/div&gt;"/>
+			<item value="submitGroupCreation"/>
+			<item value="{{{question.boardContent}}}"/>
+			<item value=" &lt;pre&gt;"/>
+			<item value="&lt;div class=&quot;post-content&quot;&gt;&#x0A;            &lt;pre&gt;&lt;code class=&quot;language-java&quot;&gt;{{{question.boardContent}}}"/>
+			<item value="&lt;input type=&quot;hidden&quot; name=&quot;groupNo&quot; value=&quot;{{groupNo}}&quot;&gt;"/>
+			<item value="boardDelete"/>
+			<item value="boardEdit"/>
+			<item value="deleteBoard"/>
+			<item value="edit"/>
+			<item value="boardListPage"/>
+			<item value="getRecentPosts()"/>
+		</list>
+	</section>
+</section>

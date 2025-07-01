@@ -1,0 +1,52 @@
+package com.assignment.comment.controller;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.assignment.comment.service.CommentService;
+import com.assignment.comment.vo.CommentVO;
+
+import jakarta.servlet.http.HttpSession;
+
+@RestController
+@RequestMapping("/api/board/{boardNo}/comments") 
+public class CommentController {
+
+	@Autowired
+	CommentService commentService;
+
+
+	 @GetMapping
+	    public ResponseEntity<List<CommentVO>> getComments(@PathVariable("boardNo") Integer boardNo) {
+	        List<CommentVO> comments = commentService.getCommentsByBoardNo(boardNo);
+	        return ResponseEntity.ok(comments);
+	    }
+
+	    // 새 댓글/대댓글 작성 API
+	    @PostMapping
+	    public ResponseEntity<?> addComment(@PathVariable("boardNo") Integer boardNo,
+	                                        @RequestBody CommentVO comment,
+	                                        HttpSession session) {
+	        String loginId = (String) session.getAttribute("loginId");
+	        if (loginId == null) {
+	            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
+	        }
+
+	        comment.setBoardNo(boardNo);
+	        comment.setWriterId(loginId);
+	        
+	        CommentVO savedComment = commentService.addComment(comment);
+	        return ResponseEntity.status(HttpStatus.CREATED).body(savedComment);
+	    }
+	
+	
+	
+}

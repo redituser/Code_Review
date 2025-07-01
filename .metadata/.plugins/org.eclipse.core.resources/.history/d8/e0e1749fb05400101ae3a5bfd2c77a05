@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<title>{{room.roomName}} - CODE CIRCLE</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/dracula.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/lint/lint.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/hint/show-hint.min.css">
+
+
+<style>
+	/* === 기본 및 전역 설정 === */
+	:root {
+		--color-bg-default: #0d1117;
+		--color-bg-subtle: #161b22;
+		--color-border-default: #30363d;
+		--color-text-default: #e6edf3;
+		--color-text-muted: #7d8590;
+		--color-accent-primary: #1f6feb;
+        --color-accent-primary-hover: #4c82f7;
+		--color-accent-success: #238636;
+		--color-accent-success-hover: #2ea043;
+		--color-accent-danger: #da3633;
+		--font-family-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+		--font-family-mono: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo, monospace;
+	}
+	* { box-sizing: border-box; }
+	body {
+		font-family: var(--font-family-sans);
+		background: var(--color-bg-default);
+		color: var(--color-text-default);
+		margin: 0;
+		overflow: hidden;
+	}
+	.panel-header {
+		padding: 0.8rem 1rem;
+		border-bottom: 1px solid var(--color-border-default);
+		font-weight: 600;
+        flex-shrink: 0;
+	}
+    .btn {
+		padding: 0.6rem;
+		color: white;
+		border: none;
+		border-radius: 6px;
+		cursor: pointer;
+		font-weight: 600;
+		transition: background-color 0.2s;
+	}
+    .btn-success { background-color: var(--color-accent-success); }
+	.btn-success:hover { background-color: var(--color-accent-success-hover); }
+	.btn-danger { background-color: var(--color-accent-danger); }
+
+	/* === 3단 레이아웃 스타일 === */
+	.live-container { display: flex; height: 100vh; }
+	.main-content { flex-grow: 1; display: flex; flex-direction: column; }
+	.editor-panel { flex-grow: 1; display: flex; flex-direction: column; }
+    .CodeMirror { font-family: var(--font-family-mono); font-size: 14px; height: 100%; }
+
+	/* === 왼쪽 사이드바 (메뉴) === */
+	.sidebar { width: 280px; background: var(--color-bg-subtle); border-right: 1px solid var(--color-border-default); display: flex; flex-direction: column; transition: transform 0.3s ease-in-out; position: fixed; left: 0; top: 0; height: 100%; z-index: 1001; transform: translateX(-100%); }
+	.sidebar.open { transform: translateX(0); }
+	.overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; display: none; }
+	.overlay.active { display: block; }
+    #sidebarToggle { position: fixed; top: 1rem; left: 1rem; z-index: 1002; background: none; border: none; cursor: pointer; padding: 5px; }
+	#participantList { list-style: none; padding: 0.8rem 1rem; margin: 0; flex-grow: 1; overflow-y: auto; }
+	#participantList li { padding: 0.5rem 0; }
+	.room-controls { padding: 1rem; border-top: 1px solid var(--color-border-default); }
+	.control-group { margin-bottom: 1.2rem; }
+	.control-group p { margin: 0 0 0.5rem 0; font-weight: 600; }
+	.control-group input[type="text"] { width: 100%; padding: 0.5rem; background: var(--color-bg-default); border: 1px solid var(--color-border-default); color: var(--color-text-default); border-radius: 6px; }
+
+	/* ★★★ 오른쪽 채팅 패널 스타일 (Gemini 스타일) ★★★ */
+    .chat-panel-right { width: 320px; flex-shrink: 0; border-left: 1px solid var(--color-border-default); display: flex; flex-direction: column; background: #13131f; }
+    .chat-panel-right .panel-header { background-color: rgba(255, 255, 255, 0.05); }
+    .chat-messages { flex-grow: 1; padding: 1rem; overflow-y: auto; display: flex; flex-direction: column-reverse; } /* 새 메시지가 아래에 오도록 */
+    .chat-message { margin-top: 1rem; max-width: 85%; display: flex; flex-direction: column; }
+    .chat-message .sender { font-size: 0.75em; font-weight: 600; color: #8ab4f8; margin-bottom: 0.3rem; padding: 0 0.2rem; }
+    .chat-message .content { background: #282a36; padding: 0.6rem 0.9rem; border-radius: 4px 18px 18px 18px; font-size: 0.9em; word-wrap: break-word; line-height: 1.5; }
+    .chat-message.mine { align-self: flex-end; }
+    .chat-message.mine .sender { color: #fdd663; }
+    .chat-message.mine .content { background: #373c4f; border-radius: 18px 4px 18px 18px; }
+    .chat-input-form { display: flex; padding: 0.8rem; border-top: 1px solid var(--color-border-default); background-color: rgba(0,0,0,0.1); }
+    .chat-input-form input { flex-grow: 1; border: 1px solid transparent; background: #202124; color: var(--color-text-default); padding: 0.7rem 1rem; border-radius: 20px; margin-right: 0.5rem; transition: all 0.2s ease; }
+    .chat-input-form input:focus { outline: none; border-color: #8ab4f8; background-color: #282a36;}
+    .chat-input-form button { display: flex; align-items: center; justify-content: center; border: none; background: var(--color-accent-primary); color: white; border-radius: 50%; width: 40px; height: 40px; flex-shrink: 0; cursor: pointer; transition: background-color 0.2s ease; }
+    .chat-input-form button:hover { background-color: var(--color-accent-primary-hover); }
+    .panel-header {display: flex; justify-content: space-between; align-items: center;}
+	.typing-indicator {font-size: 0.8em; font-style: italic; color: var(--color-text-muted); transition: opacity 0.3s; }
+</style>
+</head>
+<body>
+	<button id="sidebarToggle">
+		<svg viewBox="0 0 100 80" width="25" height="25" fill="#e6edf3"><rect width="100" height="15" rx="8"></rect><rect y="30" width="100" height="15" rx="8"></rect><rect y="60" width="100" height="15" rx="8"></rect></svg>
+	</button>
+
+	<div id="overlay" class="overlay"></div>
+
+    <div class="live-container">
+		<div id="sidebar" class="sidebar">
+			<div class="panel-header">참여자 목록 &amp; 메뉴</div>
+			<ul id="participantList" style="flex-grow: 1; overflow-y: auto;">
+				<li>목록을 불러오는 중...</li>
+			</ul>
+			<div class="room-controls">
+				<div class="control-group">
+					<p>멤버 초대</p>
+					<input type="text" id="inviteMemberId" placeholder="초대할 멤버 ID">
+					<button id="inviteButton" class="btn btn-success" style="width:100%;">초대하기</button>
+				</div>
+				<div class="control-group">
+					<button id="leaveButton" class="btn btn-danger" style="width:100%;">방 나가기</button>
+				</div>
+				{{#isCreator}}
+				<div class="control-group">
+					<p style="margin-top: 1rem; border-top: 1px solid var(--color-border-default); padding-top: 1.2rem;">방장 메뉴</p>
+					<button id="deleteRoomButton" class="btn btn-danger" style="width:100%; background-color: #8b2927;">방 삭제하기</button>
+				</div>
+				{{/isCreator}}
+			</div>
+		</div>
+
+		<div class="main-content">
+			<div class="editor-panel">
+                <div class="panel-header">
+                    <span>{{room.roomName}}</span>
+                    <span id="typingIndicator" class="typing-indicator"></span>
+                </div>
+				<textarea id="codeEditor">{{room.currentCode}}</textarea>
+			</div>
+		</div>
+
+        <div class="chat-panel-right">
+            <div class="panel-header">실시간 채팅</div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <form class="chat-input-form" id="chatForm">
+                <input type="text" id="chatInput" placeholder="메시지 입력..." autocomplete="off">
+                <button type="submit" title="전송">
+                    <svg width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M3 20V4l19 8-19 8Zm2-3l11.85-5L5 7v3.5l6 1.5-6 1.5V17Z"></path></svg>
+                </button>
+            </form>
+        </div>
+	</div>
+
+
+	<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/javascript/javascript.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/clike/clike.min.js"></script> <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/python/python.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/sql/sql.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/edit/matchbrackets.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/edit/closebrackets.min.js"></script>
+
+	<script th:inline="javascript">
+    /*<![CDATA[*/
+
+    // === 전역 변수 ===
+    const roomId = {{room.roomId}};
+    const loginId = '{{loginId}}';
+    const creatorId = '{{room.creatorId}}';
+    let stompClient = null;
+    let codeMirrorEditor = null;
+    let typingTimer = null; // 디바운싱을 위한 타이머
+    let isTypingSent = false; // "타이핑 시작" 메시지를 한 번만 보내기 위한 플래그
+    const typingIndicator = document.getElementById('typingIndicator');
+    const typingUsers = new Map(); // 누가 타이핑 중인지 관리하는 Map
+
+
+
+
+    // === DOM 로드 완료 후 실행 ===
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeCodeMirror();
+        setupEventListeners();
+        connectToWebSocket();
+        loadParticipants();
+    });
+
+
+    // === 초기화 함수 ===
+
+    function initializeCodeMirror() {
+        const editorTextarea = document.getElementById('codeEditor');
+        codeMirrorEditor = CodeMirror.fromTextArea(editorTextarea, {
+            lineNumbers: true,
+            mode: "text/x-java", // Java 모드로 설정 (MIME 타입)
+            theme: "dracula",
+            matchBrackets: true,
+            autoCloseBrackets: true,
+            indentUnit: 4 // 들여쓰기 4칸
+        });
+
+        // CodeMirror 내용 변경 시 이벤트 리스너
+        codeMirrorEditor.on('change', (instance, changeObj) => {
+        	console.log("CodeMirror 'change' 이벤트 발생!", changeObj.origin);
+            // 다른 사람에 의해 코드가 변경된 경우는 제외 (무한 루프 방지)
+                 if (changeObj.origin === 'setValue') {
+        			return; // 아무것도 하지 않고 즉시 종료
+    			} // 내가 직접 타이핑한게 아니면 무시 
+              sendCodeUpdate(changeObj); // 변경분 객체를 그대로 전송
+              handleLocalTyping();
+        });
+    }
+    
+    /**
+     * 로컬 사용자의 타이핑 이벤트를 처리하고 디바운싱을 적용하는 함수
+     */
+    function handleLocalTyping() {
+        // "타이핑 시작" 메시지를 아직 보내지 않았다면 전송
+        if (!isTypingSent) {
+            sendTypingStatus('START');
+            isTypingSent = true;
+        }
+
+        // 기존 타이머가 있다면 초기화 (사용자가 계속 입력 중이라는 의미)
+        clearTimeout(typingTimer);
+
+        // 2초 후에 "타이핑 중지" 메시지를 보내는 새로운 타이머 설정
+        typingTimer = setTimeout(() => {
+            sendTypingStatus('END');
+            isTypingSent = false;
+        }, 2000); // 2초
+    }
+
+    /**
+     * 서버로 타이핑 상태 메시지를 전송하는 함수
+     */
+    function sendTypingStatus(status) {
+        if (stompClient) {
+            const payload = {
+                status: status,
+                userNickname: loginId // 실제 닉네임으로 변경 필요
+            };
+            const message = {
+                type: `TYPING_${status}`, // TYPING_START 또는 TYPING_END
+                senderId: loginId,
+                payload: payload
+            };
+            stompClient.send(`/app/typing/${roomId}`, {}, JSON.stringify(message));
+        }
+    }
+
+    /**
+     * 다른 사용자들의 타이핑 상태를 받아 UI를 업데이트하는 함수
+     */
+    function updateTypingIndicator(senderId, payload) {
+        const { status, userNickname } = payload;
+
+        if (status === 'START') {
+            typingUsers.set(senderId, userNickname);
+        } else if (status === 'END') {
+            typingUsers.delete(senderId);
+        }
+
+        if (typingUsers.size === 0) {
+            typingIndicator.textContent = '';
+        } else if (typingUsers.size === 1) {
+            const [nickname] = typingUsers.values();
+            typingIndicator.textContent = `${nickname}님이 입력 중...`;
+        } else {
+            typingIndicator.textContent = `${typingUsers.size}명이 입력 중...`;
+        }
+    }
+    
+
+    function setupEventListeners() {
+        document.getElementById('inviteButton').addEventListener('click', inviteMember);
+        document.getElementById('leaveButton').addEventListener('click', leaveRoom);
+        document.getElementById('chatForm').addEventListener('submit', sendChatMessage);
+        
+        const deleteBtn = document.getElementById('deleteRoomButton');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', deleteRoom);
+        }
+
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('overlay');
+
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        });
+
+        overlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+        });
+    }
+
+
+    // === WebSocket 관련 함수 ===
+
+    function connectToWebSocket() {
+        const socket = new SockJS('/ws-stomp');
+        stompClient = Stomp.over(socket);
+        stompClient.debug = null; // 콘솔에 Stomp 디버그 메시지 끄기
+
+        stompClient.connect({}, (frame) => {
+            console.log('서버에 연결되었습니다: ' + frame);
+            
+            stompClient.subscribe('/topic/room/' + roomId, (message) => {
+                const update = JSON.parse(message.body);
+                handleWebSocketMessage(update);
+            });
+        });
+    }
+
+    function handleWebSocketMessage(update) {
+    	  if (update.type === 'CODE_UPDATE' && update.senderId !== loginId) {
+              // 받은 변경분(delta)을 에디터에 적용합니다.
+              const { change } = update;
+              // setValue가 아닌 replaceRange를 사용하여 변경분만 적용
+              codeMirrorEditor.replaceRange(change.text.join('\n'), change.from, change.to, 'setValue');
+          }  else if (update.type === 'CHAT_MESSAGE') {
+            displayChatMessage(update.senderId, update.payload);
+        } else if (update.type === 'TYPING_START' || update.type === 'TYPING_END') { 
+            // ★★★ 'END'가 아닌 'TYPING_END'를 확인하도록 수정 ★★★
+            updateTypingIndicator(update.senderId, update.payload);
+        } else if (update.type === 'USER_JOIN' || update.type === 'USER_LEAVE') {
+            loadParticipants();
+        } else if (update.type === 'ROOM_DELETED') {
+            stompClient.disconnect(() => {
+                alert('방장이 방을 삭제했습니다. 메인 페이지로 이동합니다.');
+                window.location.href = '/';
+            });
+        }
+    }
+
+    function sendCodeUpdate(changeObj) {
+        if (stompClient && codeMirrorEditor) {
+            const message = {
+                type: 'CODE_UPDATE',
+                senderId: loginId,
+                change: changeObj // CodeMirror의 changeObj를 그대로 담아서 전송
+            };
+            stompClient.send("/app/code/update/" + roomId, {}, JSON.stringify(message));
+        }
+    }
+
+
+
+    // === API 호출 및 UI 로직 함수 ===
+
+    async function leaveRoom() {
+        if (!confirm('정말로 방을 나가시겠습니까?')) return;
+        
+        try {
+            const response = await fetch(`/api/live-rooms/${roomId}/leave`, {
+                method: 'POST'
+            });
+            if (response.ok) {
+                alert('방을 나갔습니다.');
+                window.location.href = '/';
+            } else {
+                throw new Error('방을 나가지 못했습니다.');
+            }
+        } catch (error) {
+            console.error('Leave Room Error:', error);
+            alert('오류가 발생하여 방을 나가지 못했습니다.');
+        }
+    }
+
+    async function inviteMember() {
+        const inviteeIdInput = document.getElementById('inviteMemberId');
+        const inviteeId = inviteeIdInput.value.trim();
+        
+        if (!inviteeId) {
+            alert('초대할 멤버의 ID를 입력해주세요.');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/live-rooms/${roomId}/invite`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ inviteeId: inviteeId }),
+            });
+            
+            if (response.ok) {
+                alert(`${inviteeId}님을 방으로 초대했습니다.`);
+                inviteeIdInput.value = '';
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.message || '초대에 실패했습니다.');
+            }
+        } catch (error) {
+            console.error('Invite Error:', error);
+            alert(error.message);
+        }
+    }
+
+    async function deleteRoom() {
+        if (!confirm('방을 정말로 삭제하시겠습니까? 모든 내용이 사라집니다.')) return;
+        
+        try {
+            const response = await fetch(`/api/live-rooms/${roomId}`, {
+                method: 'DELETE',
+            });
+            
+            if (response.ok) {
+            	// 성공 시에는 별도 alert 없이 ROOM_DELETED 메시지를 통해 리다이렉트 됩니다.
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.message || '방 삭제에 실패했습니다.');
+            }
+        } catch (error) {
+            console.error('Delete Room Error:', error);
+            alert(error.message);
+        }
+    }
+
+    async function loadParticipants() {
+        const listElement = document.getElementById('participantList');
+        try {
+            const response = await fetch(`/api/live-rooms/${roomId}/members`);
+            if (!response.ok) throw new Error('참여자 목록 로드 실패');
+
+            const participants = await response.json();
+            
+            if (participants && participants.length > 0) {
+                 listElement.innerHTML = participants.map(p => {
+                     const isCreator = p.memberId === creatorId;
+                     const creatorBadge = isCreator ? ' <span style="color: #f8c555; font-size: 0.8em;">(방장👑)</span>' : '';
+                     return `<li class="participant-item">${p.nickname} (${p.memberId})${creatorBadge}</li>`;
+                 }).join('');
+            } else {
+                 listElement.innerHTML = '<li>참여자가 없습니다.</li>';
+            }
+        } catch (error) {
+            console.error('Load Participants Error:', error);
+            listElement.innerHTML = '<li>목록을 불러올 수 없습니다.</li>';
+        }
+    }
+    
+    function sendChatMessage(event) {
+        event.preventDefault();
+        const chatInput = document.getElementById('chatInput');
+        const messageContent = chatInput.value.trim();
+        if (messageContent && stompClient) {
+            const chatPayload = {
+                message: messageContent,
+                senderNickname: loginId // 실제 닉네임으로 변경 필요
+            };
+            const message = {
+                type: 'CHAT',
+                senderId: loginId,
+                payload: chatPayload
+            };
+            stompClient.send("/app/chat/" + roomId, {}, JSON.stringify(message));
+            chatInput.value = '';
+        }
+    }
+    
+    function displayChatMessage(senderId, payload) {
+        const messagesContainer = document.getElementById('chatMessages');
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('chat-message');
+        if (senderId === loginId) {
+            messageElement.classList.add('mine');
+        }
+        // HTML 태그를 방지하기 위해 텍스트를 안전하게 처리
+        const safeMessage = payload.message.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        messageElement.innerHTML = `
+            <div class="sender">${payload.senderNickname || senderId}</div>
+            <div class="content">${safeMessage}</div>
+        `;
+        // 새 메시지를 맨 위에 추가 (flex-direction: column-reverse 때문에 아래에 보임)
+        messagesContainer.insertBefore(messageElement, messagesContainer.firstChild);
+    }
+    
+    /*]]>*/
+    </script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>관리자 대시보드</title>
+<style>
+    body { background-color: #0d1117; color: #e6edf3; font-family: sans-serif; padding: 20px; }
+    h1 { color: #f8c555; }
+</style>
+</head>
+<body>
+    <h1>관리자 대시보드</h1>
+    <p>이 페이지는 관리자만 접근할 수 있습니다.</p>
+    <p>앞으로 이 곳에 사용자 관리, 게시글 관리 등 다양한 기능이 추가될 예정입니다.</p>
+    <hr>
+    <a href="/" style="color: #1f6feb;">메인 페이지로 돌아가기</a>
+</body>
+</html>

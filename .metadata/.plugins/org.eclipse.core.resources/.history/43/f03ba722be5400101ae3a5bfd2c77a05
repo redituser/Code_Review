@@ -1,0 +1,48 @@
+package com.assignment.admin.controller;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@Controller
+public class AdminController {
+
+	 @GetMapping("/dashboard")
+	    public String adminDashboard(
+	            @RequestParam(required = false) String keyword, // 검색어 파라미터
+	            @PageableDefault(size = 10, sort = "createDate", direction = Sort.Direction.DESC) Pageable pageable,
+	            Model model) {
+	        
+	        Page<MemberVO> memberPage = adminService.findMembers(keyword, pageable);
+	        model.addAttribute("memberPage", memberPage);
+	        model.addAttribute("keyword", keyword); // 검색어를 다시 뷰로 전달
+	        
+	        return "admin/dashboard";
+	    }
+
+	    // ★★★ [추가] 사용자 등급 변경 API ★★★
+	    @PostMapping("/users/{userId}/type")
+	    @ResponseBody
+	    public ResponseEntity<?> updateUserType(@PathVariable String userId, @RequestBody Map<String, Character> payload) {
+	        try {
+	            adminService.updateUserType(userId, payload.get("type"));
+	            return ResponseEntity.ok().build();
+	        } catch (Exception e) {
+	            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+	        }
+	    }
+
+	    // ★★★ [추가] 사용자 삭제 API ★★★
+	    @DeleteMapping("/users/{userId}")
+	    @ResponseBody
+	    public ResponseEntity<?> deleteUser(@PathVariable String userId) {
+	        try {
+	            adminService.deleteUser(userId);
+	            return ResponseEntity.ok().build();
+	        } catch (Exception e) {
+	            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+	        }
+	    }
+
+
+	
+}

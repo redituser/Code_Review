@@ -1,0 +1,38 @@
+package com.assignment.board.dao;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import com.assignment.board.vo.BoardVO;
+
+//JPA 전용
+@Repository
+public interface BoardRepository extends JpaRepository<BoardVO, Integer>{
+	List<BoardVO> findAll();
+	BoardVO findById(int id);
+	<S extends BoardVO> S save(S entity);
+	List<BoardVO> findByGroupNoOrderByBoardNoDesc(Integer groupNo);
+	List<BoardVO> findByBoardTypeOrderByBoardNoDesc(String boardType);
+	List<BoardVO> findByGroupNoAndBoardTypeOrderByBoardNoDesc(int groupNo, String boardType);
+	List<BoardVO> findByWriterIdOrderByCreateDateDesc(String writerId);
+	List<BoardVO> findTop5ByOrderByCreateDateDesc();
+	
+	
+	 @Query(value = "SELECT b.boardNo FROM BoardVO b LEFT JOIN b.likes l " +
+             "GROUP BY b.boardNo, b.createDate " + // <<< 여기에 b.createDate 추가
+             "ORDER BY COUNT(l) DESC, b.createDate DESC",
+     countQuery = "SELECT COUNT(b) FROM BoardVO b")
+Page<Integer> findPopularBoardIds(Pageable pageable);
+	 
+	 
+	 List<BoardVO> findByParentBoardNoOrderByCreateDateAsc(Integer parentBoardNo);
+	
+	 
+
+}

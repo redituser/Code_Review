@@ -1,0 +1,21 @@
+{{#invites}}
+<div style="border: 1px solid #30363d; border-radius: 6px; padding: 12px; margin-bottom: 12px; background-color: #0d1117;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <div style="color: #f0f6fc; font-weight: 600;">{{groupName}}</div>
+            <div style="color: #7d8590; font-size: 12px;">{{inviterId}}님이 초대 • {{createDate}}</div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <button onclick="acceptInvite({{inviteNo}})" class="btn" style="font-size: 12px; padding: 4px 8px;">수락</button>
+            <button onclick="rejectInvite({{inviteNo}})" class="btn btn-secondary" style="font-size: 12px; padding: 4px 8px;">거절</button>
+        </div>
+    </div>
+</div>
+{{/invites}}
+
+{{^invites}}
+<div style="text-align: center; padding: 40px 0; color: #7d8590;">
+    <div style="font-size: 48px; margin-bottom: 16px;">📭</div>
+    <p>받은 초대가 없습니다.</p>
+</div>
+{{/invites}}

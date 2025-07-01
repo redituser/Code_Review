@@ -1,0 +1,39 @@
+package com.assignment.mainController;
+
+import com.assignment.AssignmentApplication;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.bind.annotation.RequestParam;
+
+
+@Controller
+public class MainController {
+
+	private final AssignmentApplication assignmentApplication;
+
+	MainController(AssignmentApplication assignmentApplication) {
+		this.assignmentApplication = assignmentApplication;
+	}
+
+	@GetMapping("/")
+	public String mainPage() {
+		System.out.println("mainPage 메소드가 호출되었습니다!");
+		return "main/main"; // 일단 그대로
+	}
+
+	@GetMapping("/user/login")
+	public String loginPage() {
+		System.out.println("로그인 호출");
+		return "user/login";
+	}
+
+	@PostMapping("/user/signup")
+	public String signUp() {
+		return "redirect:/user/userpage";
+	}
+	
+	
+	
+}

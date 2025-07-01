@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>받은 초대</title>
+</head>
+<body>
+    <h1>받은 초대 목록</h1>
+    
+    <table border="1">
+        <thead>
+            <tr>
+                <th>그룹명</th>
+                <th>초대한 사람</th>
+                <th>초대일</th>
+                <th>액션</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#invites}}
+            <tr>
+                <td>{{groupName}}</td>
+                <td>{{inviterId}}</td>
+                <td>{{createDate}}</td>
+                <td>
+                    <form style="display:inline;" action="/invite/accept" method="post">
+                        <input type="hidden" name="inviteNo" value="{{inviteNo}}">
+                        <input type="submit" value="수락">
+                    </form>
+                    
+                    <form style="display:inline;" action="/invite/reject" method="post">
+                        <input type="hidden" name="inviteNo" value="{{inviteNo}}">
+                        <input type="submit" value="거절">
+                    </form>
+                </td>
+            </tr>
+            {{/invites}}
+        </tbody>
+    </table>
+    
+    {{^invites}}
+    <p>받은 초대가 없습니다.</p>
+    {{/invites}}
+</body>
+</html>

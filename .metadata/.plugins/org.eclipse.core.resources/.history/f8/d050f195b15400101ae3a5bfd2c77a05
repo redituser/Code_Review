@@ -1,0 +1,87 @@
+package com.assignment.member.vo;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
+import jakarta.persistence.Table;
+
+@Entity
+@Table(name = "CC_MEMBER")
+public class MemberVO {
+	
+	@Id
+	@Column(name = "ID")
+	private String id;
+	@Column(name = "PASSWORD")
+	private String password;
+	@Column(name = "EMAIL")
+	private String email;
+	@Column(name = "NICKNAME")
+	private String nickName;
+	@Column(name = "TYPE")
+	private char type;
+	@Column(name = "CREATE_DATE")
+	private String sysdate;
+	
+	@Lob // 데이터베이스의 CLOB 타입과 매핑
+	@Column(name = "FACE_EMBEDDING")
+	private String faceEmbedding;
+	
+	public String getFaceEmbedding() {
+        return faceEmbedding;
+    }
+
+    public void setFaceEmbedding(String faceEmbedding) {
+        this.faceEmbedding = faceEmbedding;
+    }
+
+	public	String getId() {
+		return id;
+	}
+
+	public void setId(String id) {
+		this.id = id;
+	}
+
+	public String getPassword() {
+		return password;
+	}
+
+	public void setPassword(String password) {
+		this.password = password;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	public String getNickName() {
+		return nickName;
+	}
+
+	public void setNickName(String nickName) {
+		this.nickName = nickName;
+	}
+
+	public char getType() {
+		return type;
+	}
+
+	public void setType(char type) {
+		this.type = type;
+	}
+
+	public String getSysdate() {
+		return sysdate;
+	}
+
+	public void setSysdate(String sysdate) {
+		this.sysdate = sysdate;
+	}
+
+}

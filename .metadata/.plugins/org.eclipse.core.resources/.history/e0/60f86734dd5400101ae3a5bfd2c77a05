@@ -1,0 +1,15 @@
+package com.assignment.board.Controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.assignment.board.service.BoardService;
+import com.assignment.like.service.LikeService;
+
+public class DashboardController {
+	@Autowired
+	private BoardService boardService;
+
+	@Autowired
+	private LikeService likeService;
+
+}

@@ -1,0 +1,265 @@
+package com.assignment.member.memberController;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.client.RestTemplate;
+
+import com.assignment.member.service.MemberService;
+import com.assignment.member.vo.MemberVO;
+
+import jakarta.servlet.http.HttpSession;
+
+@Controller
+public class MemberController {
+
+	@Autowired
+	MemberService service;
+
+	private final RestTemplate restTemplate = new RestTemplate();
+	@Value("${faceapi.url}")
+	private String faceApiUrl;
+
+	@PostMapping("/user/login")
+	public String login(@RequestParam("id") String id, @RequestParam("password") String password, HttpSession session) {
+		System.out.print("로그인 컨트롤러 호출");
+		boolean login = service.login(id, password);
+
+		if (login) {
+			session.setAttribute("loginId", id);
+			return "redirect:/";
+		} else {
+			return "user/login";
+		}
+	}
+
+	
+	@GetMapping("member/logout") // 로그아웃
+	public String logout(HttpSession session) {
+		session.invalidate();
+		return "redirect:/";
+	}
+
+	@PostMapping("member/mypage/modify")
+	public String modifyMyInfo(MemberVO vo, HttpSession session) {
+		String loginId = (String) session.getAttribute("loginId");
+
+		if (loginId == null) {
+			return "redirect:/user/login";
+		}
+		vo.setId(loginId);
+		service.modifyMember(vo);
+
+		return "redirect:/user/mypage";
+	}
+
+	/**
+	 * [수정된 부분] 멤버 검색 API를 더 안정적으로 만듭니다.
+	 */
+	@GetMapping("/member/search")
+	@ResponseBody
+	public List<String> searchMembers(@RequestParam(name = "q", required = false) String query) {
+
+		// 1. 방어 코드 추가: 쿼리 파라미터가 없거나(null), 비어있는 경우
+		// 에러를 발생시키는 대신, 안전하게 빈 목록을 반환합니다.
+		if (query == null || query.trim().isEmpty()) {
+			return Collections.emptyList();
+		}
+
+		List<String> allResults = new ArrayList<>();
+
+		String[] searchTerms = query.split(",");
+		for (String term : searchTerms) {
+			String trimmedTerm = term.trim();
+			if (!trimmedTerm.isEmpty()) {
+				List<String> results = service.searchMembersByNickName(trimmedTerm);
+				allResults.addAll(results);
+			}
+		}
+
+		return allResults;
+	}
+
+	@PostMapping("/user/signup-with-face")
+	@ResponseBody
+	public Map<String, Object> signupWithFace(@RequestBody MemberVO vo) {
+
+		// JavaScript에서 faceImageData를 faceEmbedding 필드에 임시로 담아 보냈다고 가정
+		String faceImageData = vo.getFaceEmbedding(); 
+		vo.setFaceEmbedding(null); // 실제 임베딩으로 채우기 전 초기화
+		vo.setType('U');
+		
+		if (faceImageData != null && !faceImageData.isEmpty()) {
+			try {
+				HttpHeaders headers = new HttpHeaders();
+				headers.setContentType(MediaType.APPLICATION_JSON);
+				Map<String, String> requestBody = Map.of("image", faceImageData);
+				HttpEntity<Map<String, String>> entity = new HttpEntity<>(requestBody, headers);
+
+				ResponseEntity<Map> response = restTemplate.postForEntity(faceApiUrl + "/generate-embedding", entity, Map.class);
+
+				if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                    Map<String, Object> responseBody = response.getBody();
+                    if ((Boolean) responseBody.get("success")) {
+                        // Python 서버가 보내준 임베딩 값을 vo에 설정
+                        String embedding = responseBody.get("embedding").toString();
+                        vo.setFaceEmbedding(embedding);
+                    } else {
+                        return Map.of("success", false, "message", "얼굴 인식 실패: " + responseBody.get("error"));
+                    }
+                } else {
+                     return Map.of("success", false, "message", "얼굴 인식 서버 응답 오류");
+                }
+			} catch (Exception e) {
+				return Map.of("success", false, "message", "얼굴 인식 서버 통신 오류: " + e.getMessage());
+			}
+		}
+
+		// [수정된 부분 2] 회원 정보를 DB에 최종 저장하는 로직 추가
+		boolean isSuccess = service.registerMember(vo);
+
+		if (isSuccess) {
+			return Map.of("success", true, "message", "회원가입이 완료되었습니다.");
+		} else {
+			return Map.of("success", false, "message", "아이디 또는 닉네임이 중복됩니다.");
+		}
+	}
+
+	
+	@GetMapping("/user/face-login")
+	public String showFaceLoginPage() {
+	    
+	    return "user/face-login";
+	}
+	
+	@GetMapping("/user/signup")
+    public String showSignupPage() {
+        // 이 코드는 "templates/user/" 폴더 아래의 "signup.mustache" 파일을
+        // 찾아서 웹페이지로 렌더링하라는 의미입니다.
+        return "user/signup";
+    }
+	
+	@PostMapping("/user/face-login")
+	@ResponseBody
+	public Map<String, Object> faceLogin(@RequestBody Map<String, String> payload, HttpSession session) {
+
+		String faceImageData = payload.get("faceImageData");
+
+		List<MemberVO> membersWithFaces = service.findAllWithFaceEmbeddings();
+		if (membersWithFaces.isEmpty()) {
+			return Map.of("verified", false, "message", "등록된 얼굴 정보가 없습니다.");
+		}
+		Map<String, String> dbEmbeddings = membersWithFaces.stream()
+				.collect(Collectors.toMap(MemberVO::getId, MemberVO::getFaceEmbedding));
+
+		try {
+			HttpHeaders headers = new HttpHeaders();
+			headers.setContentType(MediaType.APPLICATION_JSON);
+			Map<String, Object> requestBody = Map.of("target_image", faceImageData, "db_embeddings", dbEmbeddings);
+			HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+
+			ResponseEntity<Map> response = restTemplate.postForEntity(faceApiUrl + "/find-user-by-face", entity, Map.class);
+			
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                Map<String, Object> responseBody = response.getBody();
+                if ((Boolean) responseBody.get("verified")) {
+                    String userId = (String) responseBody.get("userId");
+                    session.setAttribute("loginId", userId);
+                    return Map.of("verified", true, "redirectUrl", "/");
+                } else {
+                    return Map.of("verified", false, "message", "인증에 실패했습니다.");
+                }
+            } else {
+                 return Map.of("verified", false, "message", "얼굴 인식 서버 응답 오류");
+            }
+		} catch (Exception e) {
+			return Map.of("verified", false, "message", "얼굴 인식 서버 통신 오류: " + e.getMessage());
+		}
+	}
+	
+	
+	 @GetMapping("/member/mypage")
+	    public String myPage(Model model, HttpSession session) {
+	        String loginId = (String) session.getAttribute("loginId");
+	        if (loginId == null) {
+	            return "redirect:/user/login";
+	        }
+
+	        // 서비스에서 현재 로그인된 사용자 정보를 가져옴
+	        MemberVO member = service.getMemberById(loginId);
+	        model.addAttribute("member", member);
+
+	        // 앞으로 이 곳에 내가 쓴 글, 그룹 목록 등을 추가로 조회해서 모델에 담아주면 됩니다.
+	        // 예: List<BoardVO> myPosts = boardService.getPostsByWriter(loginId);
+	        //    model.addAttribute("myPosts", myPosts);
+
+	        return "user/mypage"; // templates/member/mypage.mustache 파일을 렌더링
+	    }
+	 
+	 @PostMapping("/api/member/profile")
+	    @ResponseBody // JSON 응답을 위해 추가
+	    public ResponseEntity<?> updateProfile(@RequestBody MemberVO memberData, HttpSession session) {
+	        String loginId = (String) session.getAttribute("loginId");
+	        if (loginId == null) {
+	            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "로그인이 필요합니다."));
+	        }
+
+	        try {
+	            // 서비스에 프로필 업데이트 요청
+	            MemberVO updatedMember = service.updateProfile(loginId, memberData.getNickName(), memberData.getEmail());
+	            return ResponseEntity.ok(updatedMember);
+	        } catch (Exception e) {
+	            // 닉네임, 이메일 중복 등의 예외 처리
+	            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+	        }
+	    }
+	 
+	 
+	 @PostMapping("/api/member/check-nickname")
+	 @ResponseBody
+	 public ResponseEntity<?> checkNickname(@RequestBody Map<String, String> payload) {
+	     String nickname = payload.get("nickname");
+	     boolean isAvailable = service.isNicknameAvailable(nickname);
+	     // 결과를 JSON 형태로 반환합니다. {"available": true} 또는 {"available": false}
+	     return ResponseEntity.ok(Map.of("available", isAvailable));
+	 }
+	 
+	 @PostMapping("/api/member/change-password")
+	 @ResponseBody
+	 public ResponseEntity<?> changePassword(@RequestBody Map<String, String> payload, HttpSession session) {
+	     String loginId = (String) session.getAttribute("loginId");
+	     if (loginId == null) {
+	         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "로그인이 필요합니다."));
+	     }
+
+	     String currentPassword = payload.get("currentPassword");
+	     String newPassword = payload.get("newPassword");
+
+	     boolean isSuccess = service.changePassword(loginId, currentPassword, newPassword);
+
+	     if (isSuccess) {
+	         return ResponseEntity.ok(Map.of("message", "비밀번호가 성공적으로 변경되었습니다."));
+	     } else {
+	         return ResponseEntity.badRequest().body(Map.of("message", "현재 비밀번호가 일치하지 않습니다."));
+	     }
+	 }
+	 
+	
+}

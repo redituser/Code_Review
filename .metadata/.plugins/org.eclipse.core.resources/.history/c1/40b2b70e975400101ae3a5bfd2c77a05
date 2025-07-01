@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<title>{{room.roomName}} - CODE CIRCLE</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/dracula.min.css">
+
+<style>
+	/* === 기본 및 전역 설정 === */
+	:root {
+		--color-bg-default: #0d1117;
+		--color-bg-subtle: #161b22;
+		--color-border-default: #30363d;
+		--color-text-default: #e6edf3;
+		--color-text-muted: #7d8590;
+		--color-accent-primary: #1f6feb;
+        --color-accent-primary-hover: #4c82f7;
+		--color-accent-success: #238636;
+		--color-accent-success-hover: #2ea043;
+		--color-accent-danger: #da3633;
+		--font-family-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+		--font-family-mono: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo, monospace;
+	}
+	* { box-sizing: border-box; }
+	body {
+		font-family: var(--font-family-sans);
+		background: var(--color-bg-default);
+		color: var(--color-text-default);
+		margin: 0;
+		overflow: hidden;
+	}
+	.panel-header {
+		padding: 0.8rem 1rem;
+		border-bottom: 1px solid var(--color-border-default);
+		font-weight: 600;
+        flex-shrink: 0;
+	}
+    .btn {
+		padding: 0.6rem;
+		color: white;
+		border: none;
+		border-radius: 6px;
+		cursor: pointer;
+		font-weight: 600;
+		transition: background-color 0.2s;
+	}
+    .btn-success { background-color: var(--color-accent-success); }
+	.btn-success:hover { background-color: var(--color-accent-success-hover); }
+	.btn-danger { background-color: var(--color-accent-danger); }
+
+	/* === 3단 레이아웃 스타일 === */
+	.live-container { display: flex; height: 100vh; }
+	.main-content { flex-grow: 1; display: flex; flex-direction: column; }
+	.editor-panel { flex-grow: 1; display: flex; flex-direction: column; }
+    .CodeMirror { font-family: var(--font-family-mono); font-size: 14px; height: 100%; }
+
+	/* === 왼쪽 사이드바 (메뉴) === */
+	.sidebar { width: 280px; background: var(--color-bg-subtle); border-right: 1px solid var(--color-border-default); display: flex; flex-direction: column; transition: transform 0.3s ease-in-out; position: fixed; left: 0; top: 0; height: 100%; z-index: 1001; transform: translateX(-100%); }
+	.sidebar.open { transform: translateX(0); }
+	.overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; display: none; }
+	.overlay.active { display: block; }
+    #sidebarToggle { position: fixed; top: 1rem; left: 1rem; z-index: 1002; background: none; border: none; cursor: pointer; padding: 5px; }
+	#participantList { list-style: none; padding: 0.8rem 1rem; margin: 0; flex-grow: 1; overflow-y: auto; }
+	#participantList li { padding: 0.5rem 0; }
+	.room-controls { padding: 1rem; border-top: 1px solid var(--color-border-default); }
+	.control-group { margin-bottom: 1.2rem; }
+	.control-group p { margin: 0 0 0.5rem 0; font-weight: 600; }
+	.control-group input[type="text"] { width: 100%; padding: 0.5rem; background: var(--color-bg-default); border: 1px solid var(--color-border-default); color: var(--color-text-default); border-radius: 6px; }
+
+	/* ★★★ 오른쪽 채팅 패널 스타일 (Gemini 스타일) ★★★ */
+    .chat-panel-right { width: 320px; flex-shrink: 0; border-left: 1px solid var(--color-border-default); display: flex; flex-direction: column; background: #13131f; }
+    .chat-panel-right .panel-header { background-color: rgba(255, 255, 255, 0.05); }
+    .chat-messages { flex-grow: 1; padding: 1rem; overflow-y: auto; display: flex; flex-direction: column-reverse; } /* 새 메시지가 아래에 오도록 */
+    .chat-message { margin-top: 1rem; max-width: 85%; display: flex; flex-direction: column; }
+    .chat-message .sender { font-size: 0.75em; font-weight: 600; color: #8ab4f8; margin-bottom: 0.3rem; padding: 0 0.2rem; }
+    .chat-message .content { background: #282a36; padding: 0.6rem 0.9rem; border-radius: 4px 18px 18px 18px; font-size: 0.9em; word-wrap: break-word; line-height: 1.5; }
+    .chat-message.mine { align-self: flex-end; }
+    .chat-message.mine .sender { color: #fdd663; }
+    .chat-message.mine .content { background: #373c4f; border-radius: 18px 4px 18px 18px; }
+    .chat-input-form { display: flex; padding: 0.8rem; border-top: 1px solid var(--color-border-default); background-color: rgba(0,0,0,0.1); }
+    .chat-input-form input { flex-grow: 1; border: 1px solid transparent; background: #202124; color: var(--color-text-default); padding: 0.7rem 1rem; border-radius: 20px; margin-right: 0.5rem; transition: all 0.2s ease; }
+    .chat-input-form input:focus { outline: none; border-color: #8ab4f8; background-color: #282a36;}
+    .chat-input-form button { display: flex; align-items: center; justify-content: center; border: none; background: var(--color-accent-primary); color: white; border-radius: 50%; width: 40px; height: 40px; flex-shrink: 0; cursor: pointer; transition: background-color 0.2s ease; }
+    .chat-input-form button:hover { background-color: var(--color-accent-primary-hover); }
+</style>
+</head>
+<body>
+	<button id="sidebarToggle">
+		<svg viewBox="0 0 100 80" width="25" height="25" fill="#e6edf3"><rect width="100" height="15" rx="8"></rect><rect y="30" width="100" height="15" rx="8"></rect><rect y="60" width="100" height="15" rx="8"></rect></svg>
+	</button>
+
+	<div id="overlay" class="overlay"></div>
+
+	<div class="live-container">
+		<div id="sidebar" class="sidebar">
+			<div class="panel-header">참여자 목록 &amp; 메뉴</div>
+			<ul id="participantList" style="flex-grow: 1; overflow-y: auto;"><li>목록을 불러오는 중...</li></ul>
+			<div class="room-controls">
+				<div class="control-group">
+					<p>멤버 초대</p>
+					<input type="text" id="inviteMemberId" placeholder="초대할 멤버 ID">
+					<button id="inviteButton" class="btn btn-success" style="width: 100%;">초대하기</button>
+				</div>
+				<div class="control-group">
+					<button id="leaveButton" class="btn btn-danger" style="width: 100%;">방 나가기</button>
+				</div>
+				{{#isCreator}}
+				<div class="control-group">
+					<p style="margin-top: 1rem; border-top: 1px solid var(--color-border-default); padding-top: 1.2rem;">방장 메뉴</p>
+					<button id="deleteRoomButton" class="btn btn-danger" style="width:100%; background-color: #8b2927;">방 삭제하기</button>
+				</div>
+				{{/isCreator}}
+			</div>
+		</div>
+
+		<div class="main-content">
+			<div class="editor-panel">
+				<div class="panel-header">{{room.roomName}}</div>
+				<textarea id="codeEditor">{{room.currentCode}}</textarea>
+			</div>
+		</div>
+
+        <div class="chat-panel-right">
+            <div class="panel-header">실시간 채팅</div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <form class="chat-input-form" id="chatForm">
+                <input type="text" id="chatInput" placeholder="메시지 입력..." autocomplete="off">
+                <button type="submit" title="전송"><svg width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M3 20V4l19 8-19 8Zm2-3l11.85-5L5 7v3.5l6 1.5-6 1.5V17Z"></path></svg></button>
+            </form>
+        </div>
+	</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/clike/clike.min.js"></script>
+	<script>
+    /*<![CDATA[*/
+
+    // === 전역 변수 ===
+    const roomId = {{room.roomId}};
+    const loginId = '{{loginId}}';
+    const creatorId = '{{room.creatorId}}';
+    let stompClient = null;
+    let codeMirrorEditor = null;
+
+    // === DOM 로드 완료 후 실행 ===
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeCodeMirror();
+        setupEventListeners();
+        connectToWebSocket();
+        loadParticipants();
+    });
+
+    // === 초기화 함수 ===
+    function initializeCodeMirror() { /* ... 기존과 동일 ... */ }
+
+    function setupEventListeners() {
+        document.getElementById('inviteButton').addEventListener('click', inviteMember);
+        document.getElementById('leaveButton').addEventListener('click', leaveRoom);
+        document.getElementById('chatForm').addEventListener('submit', sendChatMessage);
+        const deleteBtn = document.getElementById('deleteRoomButton');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', deleteRoom);
+        }
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('overlay');
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        });
+        overlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+        });
+    }
+
+    // === WebSocket 관련 함수 ===
+    function connectToWebSocket() {
+        const socket = new SockJS('/ws-stomp');
+        stompClient = Stomp.over(socket);
+        stompClient.debug = null;
+        stompClient.connect({}, (frame) => {
+            console.log('서버에 연결되었습니다: ' + frame);
+            stompClient.subscribe('/topic/room/' + roomId, (message) => {
+                const update = JSON.parse(message.body);
+                handleWebSocketMessage(update);
+            });
+        });
+    }
+
+    // ★★★ [버그 수정] 채팅 메시지 수신 로직 추가 ★★★
+    function handleWebSocketMessage(update) {
+        if (update.type === 'CODE_UPDATE' && update.senderId !== loginId) {
+            const cursorPos = codeMirrorEditor.getCursor();
+            codeMirrorEditor.setValue(update.editorContent); // 이제 payload가 아닌 직접 접근
+            codeMirrorEditor.setCursor(cursorPos);
+        } else if (update.type === 'CHAT_MESSAGE') {
+            // 이 부분이 누락되어 있었습니다!
+            displayChatMessage(update.senderId, update.payload);
+        } else if (update.type === 'USER_JOIN' || update.type === 'USER_LEAVE') {
+            loadParticipants();
+        } else if (update.type === 'ROOM_DELETED') {
+            stompClient.disconnect(() => {
+                alert('방장이 방을 삭제했습니다. 메인 페이지로 이동합니다.');
+                window.location.href = '/';
+            });
+        }
+    }
+
+    function sendCodeUpdate() {
+        if (stompClient && codeMirrorEditor) {
+            const message = {
+                type: 'CODE_UPDATE',
+                senderId: loginId,
+                editorContent: codeMirrorEditor.getValue()
+            };
+            stompClient.send("/app/code/update/" + roomId, {}, JSON.stringify(message));
+        }
+    }
+
+    // === 채팅 관련 함수 ===
+    function sendChatMessage(event) {
+        event.preventDefault();
+        const chatInput = document.getElementById('chatInput');
+        const messageContent = chatInput.value.trim();
+        if (messageContent && stompClient) {
+            const chatPayload = {
+                message: messageContent,
+                senderNickname: loginId // 실제 닉네임으로 변경 필요
+            };
+            const message = {
+                type: 'CHAT',
+                senderId: loginId,
+                payload: chatPayload
+            };
+            stompClient.send("/app/chat/" + roomId, {}, JSON.stringify(message));
+            chatInput.value = '';
+        }
+    }
+    
+    function displayChatMessage(senderId, payload) {
+        const messagesContainer = document.getElementById('chatMessages');
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('chat-message');
+        if (senderId === loginId) {
+            messageElement.classList.add('mine');
+        }
+        // HTML 태그를 방지하기 위해 텍스트를 안전하게 처리
+        const safeMessage = payload.message.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        messageElement.innerHTML = `
+            <div class="sender">${payload.senderNickname || senderId}</div>
+            <div class="content">${safeMessage}</div>
+        `;
+        // 새 메시지를 맨 위에 추가 (flex-direction: column-reverse 때문에 아래에 보임)
+        messagesContainer.insertBefore(messageElement, messagesContainer.firstChild);
+    }
+    
+    // === 기타 API 호출 함수 ===
+    async function leaveRoom() { /* ... 기존과 동일 ... */ }
+    async function inviteMember() { /* ... 기존과 동일 ... */ }
+    async function deleteRoom() { /* ... 기존과 동일 ... */ }
+    async function loadParticipants() { /* ... 기존과 동일 ... */ }
+    
+    /*]]>*/
+    </script>
+</body>
+</html>

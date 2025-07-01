@@ -1,0 +1,131 @@
+package com.assignment.member.service;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.assignment.member.dao.MemberRepository;
+import com.assignment.member.vo.MemberVO;
+
+@Service
+public class MemberService {
+
+	@Autowired
+	MemberRepository memberRepository;
+
+	public boolean login(String id, String password) {
+
+		Optional<MemberVO> optional = memberRepository.findById(id);
+		if (optional.isPresent()) {
+			MemberVO member = optional.get();
+			return member.getPassword().equals(password);
+		}
+		return false;
+
+	}
+
+
+	
+	@Deprecated // 향후 삭제 예정임을 표시
+	public boolean createAccount(MemberVO vo) {
+		if (memberRepository.existsById(vo.getId())) {// 중복 회원 방지
+			return false;
+		}
+
+		memberRepository.save(vo);
+		return true;
+
+	}
+
+	public void deleteAccount(MemberVO vo) {
+		memberRepository.delete(vo);
+	}
+
+	public List<String> searchMembersByNickName(String query) {
+		// 대소문자 구분 없이 ID나 닉네임에서 검색
+		return memberRepository.findByNickNameContaining(query).stream().map(MemberVO::getId).collect(Collectors.toList());
+	}
+
+	public boolean registerMember(MemberVO vo) {
+		if (memberRepository.existsById(vo.getId())) {
+			return false;
+		}
+		memberRepository.save(vo);
+		return true;
+	}
+
+	public List<MemberVO> findAllWithFaceEmbeddings() {
+		  return memberRepository.findAllByFaceEmbeddingIsNotNull();
+	}
+	
+	  public MemberVO getMemberById(String id) {
+	        return memberRepository.findById(id)
+	            .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + id));
+	    }
+	  @Transactional
+	    public MemberVO updateProfile(String loginId, String newNickname, String newEmail) {
+	        // 1. 데이터베이스에서 현재 영속 상태인 완전한 MemberVO 객체를 불러옵니다.
+	        MemberVO persistentMember = memberRepository.findById(loginId)
+	                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + loginId));
+
+	        // 2. (개선) 닉네임 중복 검사 로직을 서비스 계층에 추가합니다.
+	        // 만약 닉네임이 변경되었고, 새로운 닉네임이 이미 존재한다면 예외를 발생시킵니다.
+	        if (!persistentMember.getNickName().equals(newNickname) && memberRepository.existsByNickName(newNickname)) {
+	            throw new IllegalStateException("이미 사용 중인 닉네임입니다.");
+	        }
+	        
+	        // 3. 받아온 새로운 정보로 객체의 필드 값만 변경합니다.
+	        persistentMember.setNickName(newNickname);
+	        persistentMember.setEmail(newEmail);
+
+	        // 4. @Transactional 어노테이션에 의해 이 메서드가 끝나면,
+	        // JPA가 'persistentMember'의 변경을 감지하고 필요한 필드만(nickname, email) 자동으로 UPDATE 합니다.
+	        // 따라서 memberRepository.save()를 명시적으로 호출할 필요가 없습니다.
+	        return persistentMember;
+	    }
+	  
+	  
+	  public boolean isNicknameAvailable(String nickname) {
+		    // memberRepository에 이미 존재하는 닉네임인지 확인하는 메서드가 필요합니다.
+		    // MemberRepository에 existsByNickName(String nickName) 메서드가 있는지 확인하고 없다면 추가해야 합니다.
+		    return !memberRepository.existsByNickName(nickname);
+		}
+	  
+	  @Transactional
+	  public boolean changePassword(String loginId, String currentPassword, String newPassword) {
+	      MemberVO member = getMemberById(loginId); // 기존 사용자 정보 조회 메서드 재활용
+
+	      // 1. 현재 비밀번호가 일치하는지 확인
+	      if (!member.getPassword().equals(currentPassword)) {
+	          return false; // 비밀번호 불일치
+	      }
+
+	      // 2. 새로운 비밀번호로 변경 후 저장
+	      member.setPassword(newPassword);
+	      memberRepository.save(member);
+	      return true;
+	  }
+	  
+	  
+	  @Transactional
+	  public boolean deleteAccount(String loginId, String password) {
+	      MemberVO member = getMemberById(loginId);
+
+	      if (!member.getPassword().equals(password)) {
+	          return false; // 비밀번호 불일치
+	      }
+
+	      // 관련된 다른 데이터를 삭제하는 로직이 필요하다면 여기에 추가해야 합니다.
+	      // 예: boardRepository.deleteByWriter(loginId);
+	      
+	      memberRepository.delete(member);
+	      return true;
+	  }
+
+	  
+	  
+}

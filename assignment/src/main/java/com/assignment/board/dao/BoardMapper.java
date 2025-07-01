@@ -1,0 +1,19 @@
+package com.assignment.board.dao;
+
+import java.util.List;
+
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
+
+import com.assignment.board.vo.BoardVO;
+
+@Mapper
+public interface BoardMapper {
+	
+	@Select("select * from cc_board")
+	List<BoardVO> selectAllBoard();
+
+	
+	
+	
+}

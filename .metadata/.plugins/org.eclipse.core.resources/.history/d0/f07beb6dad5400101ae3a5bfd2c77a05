@@ -1,0 +1,20 @@
+package com.assignment.member.dao;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.assignment.liveroom.vo.LiveRoomMemberId;
+import com.assignment.member.vo.MemberVO;
+
+public interface MemberRepository extends JpaRepository<MemberVO, String> {//왠 Integer? primary 키가 String 타입이므로 String을 씀
+	
+	List<MemberVO> findByNickNameContaining(String nickname);
+
+	boolean existsById(LiveRoomMemberId id);
+	 List<MemberVO> findAllByFaceEmbeddingIsNotNull();
+		
+	 
+	 boolean existsByNickname(String nickname);
+	    boolean existsByEmail(String email);
+}

@@ -1,0 +1,93 @@
+package com.assignment.member.memberController;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.client.RestTemplate;
+
+import com.assignment.member.service.MemberService;
+import com.assignment.member.vo.MemberVO;
+
+import jakarta.servlet.http.HttpSession;
+
+@Controller
+public class MemberController {
+
+	@Autowired
+	MemberService service;
+	
+	private final RestTemplate restTemplate = new RestTemplate();
+    private final String faceApiUrl = "http://localhost:5001";
+
+	@PostMapping("/user/login")
+	public String login(@RequestParam("id") String id, @RequestParam("password") String password, HttpSession session) {
+		System.out.print("로그인 컨트롤러 호출");
+		boolean login = service.login(id, password);
+
+		if (login) {
+			session.setAttribute("loginId", id);
+			return "redirect:/";
+		} else {
+			return "user/login";
+		}
+	}
+
+	@GetMapping("member/mypage")
+	public String myPage() {
+		return "user/mypage";
+	}
+
+	@GetMapping("member/logout") // 로그아웃
+	public String logout(HttpSession session) {
+		session.invalidate();
+		return "redirect:/";
+	}
+
+	@PostMapping("member/mypage/modify")
+	public String modifyMyInfo(MemberVO vo, HttpSession session) {
+		String loginId = (String) session.getAttribute("loginId");
+
+		if (loginId == null) {
+			return "redirect:/user/login";
+		}
+		vo.setId(loginId);
+		service.modifyMember(vo);
+
+		return "redirect:/user/mypage";
+	}
+
+	/**
+	 * [수정된 부분]
+	 * 멤버 검색 API를 더 안정적으로 만듭니다.
+	 */
+	@GetMapping("/member/search")
+	@ResponseBody
+	public List<String> searchMembers(@RequestParam(name = "q", required = false) String query) {
+
+		// 1. 방어 코드 추가: 쿼리 파라미터가 없거나(null), 비어있는 경우
+		//    에러를 발생시키는 대신, 안전하게 빈 목록을 반환합니다.
+		if (query == null || query.trim().isEmpty()) {
+			return Collections.emptyList();
+		}
+
+		List<String> allResults = new ArrayList<>();
+
+		String[] searchTerms = query.split(",");
+		for (String term : searchTerms) {
+			String trimmedTerm = term.trim();
+			if (!trimmedTerm.isEmpty()) {
+				List<String> results = service.searchMembersByNickName(trimmedTerm);
+				allResults.addAll(results);
+			}
+		}
+
+		return allResults;
+	}
+}

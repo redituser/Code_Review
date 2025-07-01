@@ -1,0 +1,10 @@
+1748843460311	Rename package 'com.assignment.controller'
+1748850751484	Rename package 'templates.login'
+1748851841783	Rename resource 'login.html'
+1748851850064	Rename resource 'login.mustach'
+1748926353418	Rename resource 'board-detail.html'
+1748928281410	Move file
+1749085134138	Rename type 'MemberDAO'
+1749085166848	Delete element
+1749163242882	Rename resource 'new-group.mustache'
+1749275806544	Delete element

@@ -1,0 +1,168 @@
+package com.assignment.liveroom.service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessageSendingOperations;
+import org.springframework.stereotype.Service;
+
+import com.assignment.liveroom.dao.LiveRoomMemberRepository;
+import com.assignment.liveroom.dao.LiveRoomRepository;
+import com.assignment.liveroom.vo.LiveRoomMemberId;
+import com.assignment.liveroom.vo.LiveRoomMemberVO;
+import com.assignment.liveroom.vo.LiveRoomParticipantDto;
+import com.assignment.liveroom.vo.LiveRoomVO;
+import com.assignment.liveroomInvite.dao.LiveRoomInviteRepository;
+import com.assignment.liveroomInvite.vo.LiveRoomInviteVO;
+import com.assignment.member.dao.MemberRepository;
+
+import jakarta.transaction.Transactional;
+
+@Service
+public class LiveRoomService {
+
+	@Autowired
+	private LiveRoomRepository roomRepository;
+
+	@Autowired
+	private MemberRepository memberRepository;
+
+	@Autowired
+	private LiveRoomMemberRepository roomMemberRepository;
+
+	@Autowired
+	private SimpMessageSendingOperations messagingTemplate;
+
+	@Autowired
+	private LiveRoomInviteRepository inviteRepository;
+
+	@Transactional
+	public void deleteRoom(Long roomId, String memberId) {
+		// 1. 방 정보를 조회하여 생성자가 맞는지 확인합니다.
+		LiveRoomVO room = roomRepository.findById(roomId)
+				.orElseThrow(() -> new IllegalArgumentException("존재하지 않는 방입니다."));
+
+		if (!room.getCreatorId().equals(memberId)) {
+			throw new SecurityException("방을 삭제할 권한이 없습니다.");
+		}
+
+		// 2. [중요] DB에서 데이터를 지우기 전에, 방 삭제 알림을 먼저 보냅니다.
+		Map<String, Object> message = new HashMap<>();
+		message.put("type", "ROOM_DELETED");
+		messagingTemplate.convertAndSend("/topic/room/" + roomId, message);
+
+		// 3. 방에 속한 모든 멤버 정보를 먼저 삭제합니다.
+		roomMemberRepository.deleteAllById_RoomId(roomId);
+
+		// 4. 마지막으로 방 자체를 삭제합니다.
+		roomRepository.deleteById(roomId);
+	}
+
+	@Transactional
+	public void leaveRoom(Long roomId, String memberId) {
+		LiveRoomMemberId idToDelete = new LiveRoomMemberId();
+		idToDelete.setRoomId(roomId);
+		idToDelete.setMemberId(memberId);
+
+		roomMemberRepository.deleteById(idToDelete);
+
+		Map<String, Object> message = new HashMap<>();
+		message.put("type", "USER_LEAVE");
+		message.put("senderId", memberId);
+
+		messagingTemplate.convertAndSend("/topic/room/" + roomId, message);
+	}
+
+	@Transactional
+	public void inviteToRoom(Long roomId, String inviterId, String inviteeId) {
+		
+		
+		
+		
+		if (!memberRepository.existsById(inviteeId)) {
+			throw new IllegalStateException("존재하지 않은 사용자 입니다");
+		}
+
+		LiveRoomMemberId idToCheck = new LiveRoomMemberId(roomId, inviteeId);
+			throw new IllegalStateException("이미 참여하고 있는 멤버입니다.");
+		}
+		Optional<LiveRoomInviteVO> existingInvite = inviteRepository.findByRoomIdAndInviteeIdAndStatus(roomId,
+				inviteeId, "W");
+		if (existingInvite.isPresent()) {
+			throw new IllegalStateException("이미 초대 요청을 보낸 사용자입니다.");
+		}
+		LiveRoomInviteVO newInvite = new LiveRoomInviteVO();
+		newInvite.setRoomId(roomId);
+		newInvite.setInviterId(inviterId);
+		newInvite.setInviteeId(inviteeId);
+		newInvite.setStatus("W");
+
+		inviteRepository.save(newInvite);
+
+	}
+
+	@Transactional
+	public LiveRoomVO createRoom(String roomName, String creatorId) {
+		LiveRoomVO newRoom = new LiveRoomVO();
+		newRoom.setRoomName(roomName);
+		newRoom.setCreatorId(creatorId);
+		newRoom.setCurrentCode("// Welcome to " + roomName + "!\n");
+
+		LiveRoomVO savedRoom = roomRepository.save(newRoom);
+
+		// 생성자를 참여자로 추가
+		joinRoom(savedRoom.getRoomId(), creatorId);
+
+		return savedRoom;
+	}
+
+	public void joinRoom(Long roomId, String memberId) {
+		LiveRoomMemberId id = new LiveRoomMemberId();
+		id.setRoomId(roomId);
+		id.setMemberId(memberId);
+
+		LiveRoomMemberVO newMember = new LiveRoomMemberVO();
+		newMember.setId(id);
+		newMember.setStatus("ACTIVE");
+
+		roomMemberRepository.save(newMember);
+	}
+
+	public LiveRoomVO getRoomDetails(Long roomId) {
+		// orElseThrow는 ID에 해당하는 데이터가 없으면 예외를 발생시킵니다.
+		return roomRepository.findById(roomId)
+				.orElseThrow(() -> new IllegalArgumentException("존재하지 않는 방입니다. ID: " + roomId));
+	}
+
+	public List<LiveRoomVO> getMyRooms(String memberId) {
+		// Repository에 새로 추가한 쿼리 메소드를 호출합니다.
+		return roomRepository.findRoomsByMemberId(memberId);
+	}
+
+	public List<LiveRoomParticipantDto> getParticipants(Long roomId) {
+		return roomMemberRepository.findParticipantsByRoomId(roomId);
+	}
+
+	@Transactional
+	public void acceptInvite(int inviteNo, String loginId) {
+	    LiveRoomInviteVO invite = inviteRepository.findByInviteNoAndInviteeIdAndStatus(inviteNo, loginId, "W")
+	            .orElseThrow(() -> new IllegalArgumentException("유효하지 않거나 이미 처리된 초대입니다."));
+
+	    // [수정] 초대 상태를 '수락(A)'으로 정확하게 변경합니다.
+	    inviteRepository.updateInviteStatus(inviteNo, "A");
+
+	    roomMemberRepository.addParticipant(invite.getRoomId(), loginId);
+	}
+
+	@Transactional
+	public void rejectInvite(int inviteNo, String loginId) {
+		LiveRoomInviteVO invite = inviteRepository.findByInviteNoAndInviteeIdAndStatus(inviteNo, loginId, "W")
+				.orElseThrow(() -> new IllegalArgumentException("유효하지 않거나 이미 처리된 초대입니다."));
+
+		inviteRepository.updateInviteStatus(inviteNo, "R");
+	}
+
+}

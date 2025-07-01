@@ -1,0 +1,5 @@
+package com.assignment.admin.dto;
+
+public class AdminDto {
+
+}

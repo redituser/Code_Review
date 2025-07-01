@@ -1,0 +1,30 @@
+spring.application.name=assignment
+spring.datasource.url=jdbc:oracle:thin:@localhost:1521:xe
+spring.datasource.username=hr
+spring.datasource.password=hr
+spring.datasource.driver-class-name=oracle.jdbc.driver.OracleDriver
+mybatis.configuration.map-underscore-to-camel-case=true
+server.address=0.0.0.0
+faceapi.url=http://localhost:5001
+
+server.servlet.encoding.charset=UTF-8
+server.servlet.encoding.enabled=true
+server.servlet.encoding.force=true
+
+spring.mustache.charset=UTF-8
+
+
+
+# 서버 포트를 443(https 기본) 또는 다른 포트(예: 8443)로 설정
+server.port=8443
+
+# SSL 설정
+server.ssl.enabled=true
+# 키스토어 파일 위치 (classpath: 는 src/main/resources/ 를 의미)
+server.ssl.key-store=classpath:keystore.p12
+# 키스토어 형식
+server.ssl.key-store-type=PKCS12
+# 3단계에서 설정한 키스토어 비밀번호
+server.ssl.key-store-password=changeit
+# 키 별칭 (위 openssl 명령어에서 -name 옵션으로 준 값)
+server.ssl.key-alias=tomcat

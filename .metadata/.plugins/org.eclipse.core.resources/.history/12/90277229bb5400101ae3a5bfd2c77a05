@@ -1,0 +1,5 @@
+package com.assignment.admin.controller;
+
+public class AdminController {
+
+}

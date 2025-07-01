@@ -1,0 +1,5 @@
+package com.assignment.board.vo;
+
+public class BoardSummaryDto {
+
+}

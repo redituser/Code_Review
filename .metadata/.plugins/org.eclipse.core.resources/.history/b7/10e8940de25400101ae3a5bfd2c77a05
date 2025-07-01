@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>CODE CIRCLE - 전체 게시글</title>
+    <style>
+        /* main.html의 CSS 스타일을 여기에 붙여넣거나 별도 CSS 파일로 분리하여 링크하세요. */
+        body { background-color: #0d1117; color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        .container { max-width: 900px; margin: 20px auto; padding: 20px; }
+        .post-list__item { display: flex; gap: 12px; padding: 16px 0; border-bottom: 1px solid #30363d; }
+        .post-list__content { flex: 1; }
+        a { color: #1f6feb; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .post-list__title { font-weight: 500; font-size: 16px; margin-bottom: 6px; display: block; }
+        .post-list__meta { color: #7d8590; font-size: 12px; }
+        .pagination { text-align: center; margin-top: 30px; }
+        .pagination a, .pagination span { margin: 0 5px; color: #e6edf3; padding: 5px 10px; border: 1px solid #30363d; border-radius: 6px; }
+        .pagination a:hover { background-color: #30363d; }
+        .pagination .current { background-color: #1f6feb; border-color: #1f6feb; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>전체 게시글</h1>
+
+        <div class="post-list">
+            {{#boardPage.content}}
+            <article class="post-list__item">
+                <div class="post-list__content">
+                    <a href="/board/detail/{{boardNo}}" class="post-list__title">{{boardTitle}}</a>
+                    <div class="post-list__meta">
+                        <span>작성자: {{writerId}}</span> |
+                        <span>작성일: {{createDate}}</span> |
+                        <span style="color: #f85149;">❤️ {{likeCount}}</span>
+                    </div>
+                </div>
+            </article>
+            {{/boardPage.content}}
+            {{^boardPage.content}}
+            <p>작성된 게시글이 없습니다.</p>
+            {{/boardPage.content}}
+        </div>
+
+        <div class="pagination">
+            {{^boardPage.first}}
+            <a href="/board/list?page={{boardPage.number}}">&laquo; 이전</a>
+            {{/boardPage.first}}
+
+            <span class="current">{{boardPage.number | plus1}}</span>
+
+            {{^boardPage.last}}
+            <a href="/board/list?page={{boardPage.number | plus2}}">다음 &raquo;</a>
+            {{/boardPage.last}}
+        </div>
+    </div>
+    
+    <script>
+    // Mustache.java는 기본적으로 간단한 연산을 지원하지 않으므로, 
+    // 페이지 번호 표시를 위해 간단한 헬퍼를 등록하거나 JavaScript로 처리해야 합니다.
+    // 여기서는 간단하게 +1, +2 된 값을 컨트롤러에서 모델에 추가해주는 방식도 가능합니다.
+    // 예: model.addAttribute("nextPage", boardPage.getNumber() + 2);
+    // Mustache 에서는 {{boardPage.number}}가 0부터 시작하므로, +1된 값을 보여주는게 사용자 친화적입니다.
+    // plus1, plus2 헬퍼를 추가하는 방법은 복잡하므로, 지금은 0부터 시작하는 번호로 만족하거나 컨트롤러에서 값을 넘겨주는 방식을 추천합니다.
+    </script>
+</body>
+</html>

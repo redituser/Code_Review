@@ -1,0 +1,68 @@
+package com.assignment.admin.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import com.assignment.member.dao.MemberRepository;
+import com.assignment.member.vo.MemberVO;
+
+import jakarta.transaction.Transactional;
+
+@Service
+public class AdminService {
+	
+	  @Autowired
+	    private MemberRepository memberRepository;
+
+	    /**
+	     * 모든 사용자를 페이지 단위로 조회하거나, 검색 조건에 맞는 사용자를 조회합니다.
+	     * @param keyword 검색어 (아이디 또는 닉네임)
+	     * @param pageable 페이지 정보
+	     * @return 페이징 처리된 사용자 목록
+	     */
+	    public Page<MemberVO> findMembers(String keyword, Pageable pageable) {
+	        if (StringUtils.hasText(keyword)) {
+	            // 검색어가 있는 경우
+	            return memberRepository.findByIdContainingIgnoreCaseOrNickNameContainingIgnoreCase(keyword, keyword, pageable);
+	        } else {
+	            // 검색어가 없는 경우 (전체 조회)
+	            return memberRepository.findAll(pageable);
+	        }
+	    }
+
+	    /**
+	     * 사용자의 등급(권한)을 변경합니다.
+	     * @param userId 등급을 변경할 사용자 ID
+	     * @param newType 새로운 등급 ('A' 또는 'U')
+	     */
+	    @Transactional
+	    public void updateUserType(String userId, char newType) {
+	        MemberVO member = memberRepository.findById(userId)
+	                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
+	        
+	        // 유효한 타입인지 확인
+	        if (newType != 'A' && newType != 'U' && newType != 'G' && newType != 'M') {
+	            throw new IllegalArgumentException("유효하지 않은 사용자 등급입니다.");
+	        }
+	        
+	        member.setType(newType);
+	        memberRepository.save(member);
+	    }
+	    
+	    /**
+	     * 사용자를 삭제합니다.
+	     * @param userId 삭제할 사용자 ID
+	     */
+	    @Transactional
+	    public void deleteUser(String userId) {
+	        // 관련된 다른 데이터(게시글, 댓글 등) 처리 정책이 필요하지만, 여기서는 멤버만 삭제
+	        if (!memberRepository.existsById(userId)) {
+	            throw new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId);
+	        }
+	        memberRepository.deleteById(userId);
+	    }
+
+}

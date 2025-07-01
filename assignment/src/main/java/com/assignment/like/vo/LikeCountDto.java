@@ -1,0 +1,23 @@
+package com.assignment.like.vo;
+
+public class LikeCountDto {
+
+	private Integer boardNo;
+	private Long likeCount;
+
+	// JPQL에서 new 키워드를 통해 바로 객체를 생성하려면 생성자가 필요합니다.
+	public LikeCountDto(Integer boardNo, Long likeCount) {
+	        this.boardNo = boardNo;
+	        this.likeCount = likeCount;
+	    }
+
+	// Getter
+	public Integer getBoardNo() {
+		return boardNo;
+	}
+
+	public Long getLikeCount() {
+		return likeCount;
+	}
+
+}

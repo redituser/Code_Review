@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>그룹 초대</title>
+</head>
+<body>
+    <h1>그룹 멤버 초대</h1>
+    
+    <form action="/group/invite" method="post">
+        <input type="hidden" name="groupNo" value="{{groupNo}}">
+        
+        <table border="1">
+            <tr>
+                <td>초대할 사용자 ID</td>
+                <td><input type="text" name="inviteeId" required></td>
+            </tr>
+        </table>
+        
+        <br>
+        <input type="submit" value="초대 보내기">
+        <button type="button" onclick="history.back()">취소</button>
+    </form>
+</body>
+</html>

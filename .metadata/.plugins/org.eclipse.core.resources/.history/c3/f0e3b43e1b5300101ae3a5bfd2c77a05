@@ -1,0 +1,26 @@
+package com.assignment.like.repository;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.assignment.like.vo.Like;
+
+public interface LikeRepository extends JpaRepository<Like, Long>{
+	
+	  // 특정 사용자가 특정 게시글에 좋아요를 눌렀는지 확인
+	Optional<Like> findByBoardBoardNoAndMemberId(Integer boarNo, String memberId);//Board객체를 찾는건가?
+
+	 // 특정 게시글의 좋아요 개수 세기
+	long countByBoardBoardNo(Integer boardNo);
+	
+	// 특정 사용자가 좋아요를 누른 모든 'Like' 정보 조회
+    List<Like> findByMemberIdOrderByCreateDateDesc(String memberId);
+    
+    @Query("SELECT new com.assignment.like.dto.LikeCountDto(l.board.boardNo, COUNT(l)) " +
+            "FROM Like l " +
+            "WHERE l.board.boardNo IN :boardNos " +
+            "GROUP BY l.board.boardNo")
+     List<LikeCountDto> findLikeCountsForBoardNos(@Param("boardNos") List<Integer> boardNos);
+}

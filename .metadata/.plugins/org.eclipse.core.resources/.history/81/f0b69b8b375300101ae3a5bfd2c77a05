@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>CODE CIRCLE - 얼굴로 로그인</title>
+<style>
+    :root { --color-canvas-default: #0d1117; --color-neutral-subtle: #161b22; --color-border-default: #30363d; --color-fg-default: #e6edf3; --color-accent-fg: #1f6feb; --color-accent-emphasis: #238636; --color-fg-on-emphasis: #ffffff; }
+    body { font-family: sans-serif; background-color: var(--color-canvas-default); color: var(--color-fg-default); display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .container { width: 100%; max-width: 420px; background-color: var(--color-neutral-subtle); border: 1px solid var(--color-border-default); border-radius: 6px; padding: 24px; }
+    .btn { display: block; width: 100%; border: 1px solid var(--color-border-default); padding: 10px 12px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; text-align: center; background-color: var(--color-accent-emphasis); color: var(--color-fg-on-emphasis); }
+    #webcam-container { position: relative; width: 100%; padding-top: 75%; background: #000; margin: 10px auto; border-radius: 6px; overflow: hidden; }
+    #webcam { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+    #status-text { text-align: center; color: #7d8590; height: 20px; margin-top: 8px; font-size: 12px; }
+    #login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+</style>
+</head>
+<body>
+    <div class="container">
+        <h2 style="text-align: center; margin-bottom: 20px;">얼굴로 로그인</h2>
+        <div id="webcam-container">
+            <video id="webcam" autoplay playsinline></video>
+        </div>
+        <button type="button" id="login-btn" class="btn" disabled>로그인</button>
+        <div id="status-text">카메라 준비 중...</div>
+        <div style="text-align: center; margin-top: 20px;">
+             <a href="/user/login" style="color: var(--color-accent-fg); font-size: 12px;">ID/PW로 로그인</a>
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const video = document.getElementById('webcam');
+    const loginBtn = document.getElementById('login-btn');
+    const statusText = document.getElementById('status-text');
+
+    async function startWebcam() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            video.srcObject = stream;
+            statusText.textContent = '카메라가 준비되었습니다.';
+            loginBtn.disabled = false;
+        } catch (err) {
+            statusText.textContent = '카메라를 사용할 수 없습니다.';
+        }
+    }
+
+    loginBtn.addEventListener('click', async () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        const faceImageData = canvas.toDataURL('image/jpeg');
+
+        statusText.textContent = "인증 중입니다...";
+        loginBtn.disabled = true;
+
+        try {
+            const response = await fetch('/user/face-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ faceImageData: faceImageData })
+            });
+            const result = await response.json();
+
+            if (result.verified) {
+                statusText.textContent = "로그인 성공! 이동합니다.";
+                window.location.href = result.redirectUrl || '/';
+            } else {
+                statusText.textContent = "인증 실패. 다시 시도해주세요.";
+                alert("인증 실패: " + (result.message || ""));
+            }
+        } catch (error) {
+            alert('서버와 통신 중 오류가 발생했습니다.');
+            statusText.textContent = "오류 발생.";
+        } finally {
+             loginBtn.disabled = false;
+        }
+    });
+
+    startWebcam();
+});
+</script>
+</body>
+</html>

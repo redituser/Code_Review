@@ -1,0 +1,33 @@
+package com.assignment.board.dao;
+
+import java.util.List;
+
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
+import org.springframework.data.repository.query.Param;
+
+import com.assignment.board.vo.BoardVO;
+
+@Mapper
+public interface BoardMapper {
+	
+	@Select("select * from cc_board")
+	List<BoardVO> selectAllBoard();
+	
+	@Insert( " INSERT INTO CC_BOARD (
+            BOARD_NO, BOARD_TITLE, BOARD_CONTENT, BOARD_CATEGORY,
+            WRITER_ID, GROUP_NO, PARENT_BOARD_NO, CREATE_DATE
+        ) VALUES (
+            SEQ_CC_BOARD_NO.NEXTVAL, #{boardTitle}, #{boardContent}, #{boardCategory},
+            #{writerId}, #{groupNo}, #{parentBoardNo}, SYSDATE
+        )")
+	void insertBoard(BoardVO board);
+	BoardVO findBoardByNo(int boardNo);
+	List<BoardVO> findAnsersByQuestionNo(int questionNo);
+	void updateAcceptedAnswer(@Param("questionNo") int questionNo , @Param("answerNo") int answerNo);
+	
+	
+	
+	
+}
