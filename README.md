@@ -23,8 +23,8 @@
 ### **2.1. 전체 시스템 구성도**
 
 Spring Boot 백엔드 서버와 Python Flask 기반 AI 서버를 분리하여, 안정적인 비즈니스 로직과 얼굴 인식 기능을 각각 처리합니다. 서버 간 통신은 REST API로 이루어집니다.
+<img width="544" height="687" alt="image" src="https://github.com/user-attachments/assets/2daf60a9-5c51-44f8-8012-0eaebe7d5c45" />
 
-![image.png](image.png)
 
 ---
 
@@ -76,7 +76,8 @@ Spring Boot 백엔드 서버와 Python Flask 기반 AI 서버를 분리하여, �
 
 아래는 주요 테이블간의 관계를 요약하여 나타냈습니다.
 
-![image.png](image%201.png)
+<img width="708" height="764" alt="image 1" src="https://github.com/user-attachments/assets/b4943af3-3564-48dc-afc4-941cb61f4d51" />
+
 
 ### 4.2. 주요 테이블 명세
 
